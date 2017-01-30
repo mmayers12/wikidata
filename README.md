@@ -6,6 +6,13 @@ repositioning candidataes.
 
 ## Requirments
 
+### To compile blazegraph
+
+- `javac` - java compiler, included in default-jdk in ubuntu
+- `mvn` - apache maven
+
+### To run Blazegraph
+
 - Java 7 or greater
 
 ## Data Download
