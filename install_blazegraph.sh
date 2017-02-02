@@ -1,17 +1,24 @@
 #!/bin/bash
 
-if [ $1 ]; then
-    RELEASE=$1
-else
-    RELEASE='2_1_4'
-fi
+# Unzip the archive containing databse and helper scripts
+unzip service-0.2.4-SNAPSHOT-dist.zip
+mv service-0.2.4-SNAPSHOT db
 
-# Download Blazegraph
-git clone -b BLAZEGRAPH_RELEASE_$RELEASE --single-branch https://github.com/blazegraph/database.git BLAZEGRAPH_RELEASE_$RELEASE
+# Run Blazegraph for the first time to generate config files
+cd db
+./runBlazegraph.sh &> ../firstrun.log &
 
-# Build Blazegraph
-cd BLAZEGRAPH_RELEASE_$RELEASE
-./scripts/mavenInstall.sh
+# Number of seconds to wait
+WAIT_SECONDS=25
 
-# Configure the properties to dump to the wikidata.jnl file
-echo -e '\n# Persistence Store File\ncom.bigdata.journal.AbstractJournal.file=wikidata.jnl' >> build.properties
+# Counter to keep track of how many seconds have passed
+count=0
+
+while [ $count -lt $WAIT_SECONDS ]; do
+    sleep 1
+    ((count++))
+done
+
+PID=`pgrep java`
+kill $PID
+echo done

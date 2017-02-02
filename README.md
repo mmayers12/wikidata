@@ -24,12 +24,16 @@ The data file was approx 11 GB and took around 90 min to download.
 
 ### Database Installation
 
-Blazegraph can be installed using the `install_blazegraph.sh` script. The latest
-version `2_1_4` will be downloaded and built to the directory `BLAZEGRAPH_RELEASE_2_1_4`
-Different release versions can be by running `install_blazegraph.sh $VERSION`
+Blazegraph can be installed using the `install_blazegraph.sh` script. This will
+unzip the zipped archive. This archive was compiled from the [widkidata-qurey-rdf
+repository](https://github.com/wikimedia/wikidata-query-rdf), liscenced under the
+apache 2.0 liscence. This archive also contains many useful scripts for reducing
+the size of the data in the dump and loading into blazegraph.
 
 ### Data Load
 
 The `load_data.sh` script will load the wikidata dump file into blazegraph as a .jnl
 file.  This journal file is > 200 GB (not sure how big yet, as has yet to complete
 successfully).  This will also require a similar amount of space in the /tmp directory
+
+
