@@ -38,8 +38,6 @@ language data and all sitelinks, to reduce data size.
 
 ### Data Load
 
-The `load_data.sh` script will split load the wikidata dump file into blazegraph as a .jnl
-file.  This journal file is > 200 GB (not sure how big yet, as has yet to complete
-successfully).  This will also require a similar amount of space in the /tmp directory
-
-
+The `load_data.sh` script will load the split wikidata dump file into blazegraph.
+The data is stored in wikidata.jnl, which comes to about 90 GB in the current
+(20170130) dump of wikidata.
