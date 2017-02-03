@@ -19,6 +19,7 @@ while [ $count -lt $WAIT_SECONDS ]; do
     ((count++))
 done
 
-PID=`pgrep java`
+USER=`whoami`
+PID=`pgrep java -u $USER`
 kill $PID
 echo done

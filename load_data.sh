@@ -1,12 +1,13 @@
 #!/bin/bash
 
-if [ $1 ]; then
-    RELEASE=$1
-else
-    RELEASE='2_1_4'
-fi
+# Start Blazegraph
+cd db
+nohup ./runBlazegraph.sh > db.log &
 
-cd 'BLAZEGRAPH_RELEASE_'$RELEASE
+# Get the data directory
+pushd ../data/split > /dev/null
+DATA_DIR=`pwd`
+popd > /dev/null
 
-# Begin process of loading data: run in backgroun, output to dataload.log
-nohup ./scripts/dataLoader.sh -format Turtle build.properties ../data/wikidata-20170116-all-BETA.ttl.gz > ../dataload.log &
+# Begin the dataload process
+nohup ./loadRestAPI.sh -n wdq -d $DATA_DIR &> dataload.log &

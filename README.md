@@ -30,9 +30,15 @@ repository](https://github.com/wikimedia/wikidata-query-rdf), liscenced under th
 apache 2.0 liscence. This archive also contains many useful scripts for reducing
 the size of the data in the dump and loading into blazegraph.
 
+### Clean Data
+
+The `clean_data.sh` script will split the data into smaller pieces for better
+data loading. In the process of splitting, it will remove all non-english
+language data and all sitelinks, to reduce data size.
+
 ### Data Load
 
-The `load_data.sh` script will load the wikidata dump file into blazegraph as a .jnl
+The `load_data.sh` script will split load the wikidata dump file into blazegraph as a .jnl
 file.  This journal file is > 200 GB (not sure how big yet, as has yet to complete
 successfully).  This will also require a similar amount of space in the /tmp directory
 
