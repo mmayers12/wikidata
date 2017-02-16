@@ -52,18 +52,18 @@ This repo is designed to run with python3.
 
 ### Create and update virtual enviornment
 
-`pyvenv venv`
-`source venv/bin/activate`
-`pip install -r requirements.txt`
+    pyvenv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
 
 ### Install pymantic
 
 Make sure the virtual enviornment is activated.  If you have your SSH key linked to your
 github account use:
 
-`git clone git@github.com:filyph/blazegraph-python.git`
-`cd pymantic`
-`python setup.py install`
+    git clone git@github.com:filyph/blazegraph-python.git
+    cd pymantic
+    python setup.py install
 
 You should now be able to run the notebooks in the `nbs` folder without issue.
 
