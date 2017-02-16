@@ -34,10 +34,10 @@ the size of the data in the dump and loading into blazegraph.
 
 The `clean_data.sh` script will split the data into smaller pieces for better
 data loading. In the process of splitting, it will remove all non-english
-language data and all sitelinks, to reduce data size.
+language data and all sitelinks, to reduce data size. (approx 3 hr)
 
 ### Data Load
 
 The `load_data.sh` script will load the split wikidata dump file into blazegraph.
 The data is stored in wikidata.jnl, which comes to about 90 GB in the current
-(20170130) dump of wikidata.
+(20170130) dump of wikidata. (approx 17 hr)
