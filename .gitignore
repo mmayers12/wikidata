@@ -2,3 +2,5 @@ data
 BLAZEGRAPH*
 db
 *.log
+venv
+.ipynb_checkpoints

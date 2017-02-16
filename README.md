@@ -15,7 +15,11 @@ repositioning candidataes.
 
 - Java 7 or greater
 
-## Installation Instructions
+### To run Python scripts
+
+- [pymantic](https://github.com/filyph/blazegraph-python)
+
+## Database Installation Instructions
 
 ### Data Download
 
@@ -41,3 +45,25 @@ language data and all sitelinks, to reduce data size. (approx 3 hr)
 The `load_data.sh` script will load the split wikidata dump file into blazegraph.
 The data is stored in wikidata.jnl, which comes to about 90 GB in the current
 (20170130) dump of wikidata. (approx 17 hr)
+
+## Python installation instrucitons
+
+This repo is designed to run with python3.
+
+### Create and update virtual enviornment
+
+`pyvenv venv`
+`source venv/bin/activate`
+`pip install -r requirements.txt`
+
+### Install pymantic
+
+Make sure the virtual enviornment is activated.  If you have your SSH key linked to your
+github account use:
+
+`git clone git@github.com:filyph/blazegraph-python.git`
+`cd pymantic`
+`python setup.py install`
+
+You should now be able to run the notebooks in the `nbs` folder without issue.
+
