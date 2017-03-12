@@ -5,6 +5,7 @@ db
 *.log
 venv
 .ipynb_checkpoints
+nohup.out
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
