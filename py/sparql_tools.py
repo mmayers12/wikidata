@@ -9,8 +9,8 @@ def id_from_uri(uri):
     """
     Splits the URI for a property to give the ID
 
-    uri: String, the URI for the property
-    return: String, the entity or property's ID (e.g. Q20747295 or P31)
+    :param uri: String, the URI for the property
+    :return: String, the entity or property's ID (e.g. Q20747295 or P31)
     """
     return uri.split('/')[-1]
 
@@ -18,9 +18,12 @@ def id_from_uri(uri):
 
 class Mapping(object):
     """
-    A Class to hold id to Label mappings
+    A Base Class to hold id to Label mappings for items from wikidata
     """
     def __init__(self, map_file):
+        """
+        :param map_file: String, location of .json file containig previously acquired mappings
+        """
         self.file_loc = map_file
         if os.path.exists(map_file):
             with open(map_file, 'r') as fin:
@@ -31,10 +34,10 @@ class Mapping(object):
 
     def save_map(self, loc = None):
         """
-        Saves any changes that have been made to the mappings file.
+        Saves all mappings to a json file.
         If no location added, and no changes, prints a no changes message.
 
-        loc: file location to save the mappings, if used, will overwrite any existing file
+        :param loc: file location to save the mappings, if used, will overwrite any existing file
         """
 
         if not loc:
@@ -52,8 +55,14 @@ class Mapping(object):
                 json.dump(self.mapp, fout, indent=2)
 
 class Properties(Mapping):
-
+    """
+    Contains mappings from property ids to the label for the proerty.
+    e.g. P31 -> 'instance of'
+    """
     def __init__(self, map_file = 'wd_properties.json'):
+        """
+        :param map_file: string, the location of the .json file that contains previously determined mappings
+        """
         Mapping.__init__(self, map_file)
 
 
@@ -61,8 +70,8 @@ class Properties(Mapping):
         """
         Function to get the property name from a uri
 
-        uri: String, the wikidata property uri
-        return: String, the label for the given property (e.g. P31 reutrns 'instance of')
+        :param uri: String, the wikidata property uri
+        :return: String, the label for the given property (e.g. P31 reutrns 'instance of')
         """
 
         # Get the id for the property
@@ -92,14 +101,18 @@ class Properties(Mapping):
 
 class Entities(Mapping):
     def __init__(self, map_file = 'wd_entities.json'):
+        """
+        Class to hold mappings from wikidata entitiy Qids to entity labels
+        e.g. Q1472 -> 'Crohn's Disease'
+        """
         Mapping.__init__(self, map_file)
 
     def get_entity_label(self, uri):
         """
         Function to get the name from the entities uri
 
-        prop: String, the wikidata property code (e.g. P31)
-        return: String, the label for the given property (e.g. P31 reutrns 'instance of')
+        :param prop: String, the wikidata property code (e.g. P31)
+        :return: String, the label for the given property (e.g. P31 reutrns 'instance of')
         """
 
         eid = id_from_uri(uri)
@@ -123,8 +136,8 @@ def open_datafile(filename):
     """
     Opens a file and returns the data as a list
 
-    filename: String, the name of the file
-    return: List, the list of the items in the datafile
+    :param filename: String, the name of the file
+    :return: List, the list of the items in the datafile
     """
     out_list = []
     with open('data/'+filename, 'r') as fin:
@@ -137,8 +150,8 @@ def query_to_df(result):
     """
     Takes the json result from a sparql query and converts to a Pandas DataFrame
 
-    result: json, result from sparql query
-    return: DataFrame, results in tabulated dataframe format
+    :param result: json, result from sparql query
+    :return: DataFrame, results in tabulated dataframe format
     """
     dat = result['results']['bindings']
     dat1 = []
@@ -153,8 +166,8 @@ def query_from_list(query_list, url='http://127.0.0.1:9999/bigdata/sparql'):
     Takes a list and queries the sparql server for each item in the list.
     Returns all edges and nodes 1 degree out from source.
 
-    query_list: list, the items to be queried
-    reutrn: DataFrame, results from the qurey in tabulated dataframe format
+    :param query_list: list, the items to be queried
+    :reutrn: DataFrame, results from the qurey in tabulated dataframe format
     """
     from tqdm import tqdm
 
@@ -166,10 +179,10 @@ def query_from_list(query_list, url='http://127.0.0.1:9999/bigdata/sparql'):
     WHERE
     {{
         values ?s {{wd:{}}}
-        # Get edges and targets
+        # Get edges and object nodes
         ?s ?p ?o .
         FILTER NOT EXISTS {{?o rdf:type ?type .}}
-        # Make sure edges ave there own edges and targes
+        # Make sure object nodes (o) have there own edges and nodes
         ?o ?p2 ?o2 .
         FILTER NOT EXISTS {{?o2 rdf:type ?type .}}
         SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en" }}
