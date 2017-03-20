@@ -181,7 +181,8 @@ def query_from_list(query_list, url='http://127.0.0.1:9999/bigdata/sparql'):
         values ?s {{wd:{}}}
         # Get edges and object nodes
         ?s ?p ?o .
-        FILTER NOT EXISTS {{?o rdf:type ?type .}}
+        # Make sure using direct properties
+        FILTER REGEX(STR(?p), "prop/direct")
         # Make sure object nodes (o) have there own edges and nodes
         ?o ?p2 ?o2 .
         FILTER NOT EXISTS {{?o2 rdf:type ?type .}}
