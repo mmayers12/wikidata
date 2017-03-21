@@ -201,7 +201,7 @@ def query_from_list(query_list, url='http://127.0.0.1:9999/bigdata/sparql'):
         FILTER REGEX(STR(?p), "prop/direct")
         # Make sure object nodes (o) have there own edges and nodes
         ?o ?p2 ?o2 .
-        SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
+        SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en" }}
     }}"""
 
     # Initalize results
@@ -219,6 +219,12 @@ def query_from_list(query_list, url='http://127.0.0.1:9999/bigdata/sparql'):
     # Reset the index, remove duplicates
     df = df.reset_index(drop=True)
     df = df.drop_duplicates(subset = ['s', 'p', 'o'])
+
+    # Remove any non-entitiy objects
+    df['oid'] = df['o'].apply(id_from_uri)
+    idx = df['oid'].str.contains('Q')
+    df = df[idx]
+    df = df.reset_index(drop=True)
 
     # Make properties
     props = Properties()
