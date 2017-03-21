@@ -44,11 +44,14 @@ class Mapping(object):
             with open(self.file_loc, 'r') as fin:
                 mapp_dict = json.load(fin)
             # Compare what new properties we've looked up to those already in the file
-            if len(self.mapp) > len(mapp_dict):
+            if set(self.mapp.keys()) - set(mapp_dict.keys()):
+                # This block will run if there's something new in this obj, not in file.
+                self.mapp.update(mapp_dict)
                 with open(self.file_loc, 'w') as fout:
                     json.dump(self.mapp, fout, indent=2)
             else:
-                print('No new mappings to save')
+                name = self.__class__.__name__
+                print('No new {} to save'.format(name))
 
         else:
             with open(loc, 'w') as fout:
@@ -122,12 +125,25 @@ class Entities(Mapping):
             return self.mapp[eid]
 
         else:
-            res = requests.get(uri)
-            r_dict = eval(res.text)
-            label = r_dict['entities'][eid]['labels']['en']['value']
+            # Unlike properties, entities get changed a lot more readily
+            # and funny things can happen like merging and duplicaiton
+            try:
+                res = requests.get(uri)
+                r_dict = eval(res.text)
+                if eid in r_dict['entities'].keys():
+                    label = r_dict['entities'][eid]['labels']['en']['value']
+                else:
+                    # Some entities have been merged or renamed, and automatically redirect
+                    # to a new value. If so, keep information for both.
+                    new_eid = list(r_dict['entities'].keys())[0]
+                    label = r_dict['entities'][new_eid]['labels']['en']['value']
+                    self.mapp[new_eid] = label
 
-            # Add new mapping to the map dictionary
-            self.mapp[eid] = label
+                # Add new mapping to the map dictionary
+                self.mapp[eid] = label
+            # If there's an error in this at all, just give back the ID
+            except:
+                label = eid
 
         return label
 
@@ -175,7 +191,7 @@ def query_from_list(query_list, url='http://127.0.0.1:9999/bigdata/sparql'):
     server = sparql.SPARQLServer(url)
     # Initialize Query Text
     query_text = """
-    SELECT distinct ?s ?sLabel ?p ?o ?oLabel
+    SELECT distinct ?s ?p ?o
     WHERE
     {{
         values ?s {{wd:{}}}
@@ -185,8 +201,6 @@ def query_from_list(query_list, url='http://127.0.0.1:9999/bigdata/sparql'):
         FILTER REGEX(STR(?p), "prop/direct")
         # Make sure object nodes (o) have there own edges and nodes
         ?o ?p2 ?o2 .
-        FILTER NOT EXISTS {{?o2 rdf:type ?type .}}
-        SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en" }}
     }}"""
 
     # Initalize results
@@ -207,10 +221,14 @@ def query_from_list(query_list, url='http://127.0.0.1:9999/bigdata/sparql'):
 
     # Make properties
     props = Properties()
+    entities = Entities()
 
-    # Add in property labels
+    # Add in property and entitiy labels
     df['pLabel'] = df['p'].apply(props.get_prop_label)
+    df['sLabel'] = df['s'].apply(entities.get_entity_label)
+    df['oLabel'] = df['o'].apply(entities.get_entity_label)
     props.save_map()
+    entities.save_map()
 
     # Return df
     return df[['sLabel', 'pLabel', 'oLabel', 's', 'p', 'o']]
