@@ -191,7 +191,7 @@ def query_from_list(query_list, url='http://127.0.0.1:9999/bigdata/sparql'):
     server = sparql.SPARQLServer(url)
     # Initialize Query Text
     query_text = """
-    SELECT distinct ?s ?p ?o
+    SELECT distinct ?s ?sLabel ?p ?o ?oLabel
     WHERE
     {{
         values ?s {{wd:{}}}
@@ -201,6 +201,7 @@ def query_from_list(query_list, url='http://127.0.0.1:9999/bigdata/sparql'):
         FILTER REGEX(STR(?p), "prop/direct")
         # Make sure object nodes (o) have there own edges and nodes
         ?o ?p2 ?o2 .
+        SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
     }}"""
 
     # Initalize results
@@ -221,14 +222,10 @@ def query_from_list(query_list, url='http://127.0.0.1:9999/bigdata/sparql'):
 
     # Make properties
     props = Properties()
-    entities = Entities()
 
-    # Add in property and entitiy labels
+    # Add in property
     df['pLabel'] = df['p'].apply(props.get_prop_label)
-    df['sLabel'] = df['s'].apply(entities.get_entity_label)
-    df['oLabel'] = df['o'].apply(entities.get_entity_label)
     props.save_map()
-    entities.save_map()
 
     # Return df
     return df[['sLabel', 'pLabel', 'oLabel', 's', 'p', 'o']]
