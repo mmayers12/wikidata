@@ -177,7 +177,7 @@ def query_to_df(result):
     return pd.DataFrame(dat1)
 
 
-def query_from_list(query_list, url='http://127.0.0.1:9999/bigdata/sparql'):
+def query_from_list(query_list, query_text=None, url='http://127.0.0.1:9999/bigdata/sparql'):
     """
     Takes a list and queries the sparql server for each item in the list.
     Returns all edges and nodes 1 degree out from source.
@@ -186,34 +186,45 @@ def query_from_list(query_list, url='http://127.0.0.1:9999/bigdata/sparql'):
     :reutrn: DataFrame, results from the qurey in tabulated dataframe format
     """
     from tqdm import tqdm
+    import time
 
     # Initialze server
     server = sparql.SPARQLServer(url)
     # Initialize Query Text
-    query_text = """
-    SELECT distinct ?s ?sLabel ?p ?o ?oLabel
-    WHERE
-    {{
-        values ?s {{wd:{}}}
-        # Get edges and object nodes
-        ?s ?p ?o .
-        # Make sure using direct properties
-        FILTER REGEX(STR(?p), "prop/direct")
-        # Make sure object nodes (o) have there own edges and nodes
-        ?o ?p2 ?o2 .
-        SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en" }}
-    }}"""
+    if not query_text:
+        query_text = """
+        SELECT distinct ?s ?sLabel ?p ?o ?oLabel
+        WHERE
+        {{
+            values ?s {{wd:{}}}
+            # Get edges and object nodes
+            ?s ?p ?o .
+            # Make sure using direct properties
+            FILTER REGEX(STR(?p), "prop/direct")
+            FILTER REGEX(STR(?o), "entity/Q")
+            # Make sure object nodes (o) have there own edges and nodes
+            ?o ?p2 ?o2 .
+            SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en" }}
+        }}"""
 
     # Initalize results
     results = []
     # Append results for each item
+    print('Running queries...')
+    time.sleep(1)
     for item in tqdm(query_list):
         results.append(server.query(query_text.format(item)))
+
+    # Make properties
+    props = Properties()
 
     # Concatenate results into 1 Dataframe
     results_dfs = []
     for result in results:
-        results_dfs.append(query_to_df(result))
+        # Make into df
+        res_df = query_to_df(result)
+        if not res_df.empty:
+            results_dfs.append(res_df)
     df = pd.concat(results_dfs)
 
     # Reset the index, remove duplicates
@@ -226,11 +237,10 @@ def query_from_list(query_list, url='http://127.0.0.1:9999/bigdata/sparql'):
     df = df[idx]
     df = df.reset_index(drop=True)
 
-    # Make properties
-    props = Properties()
+    # Generate labels for the proerties
+    df['pLabel'] = df['p'].apply(props.get_prop_label)
 
     # Add in property
-    df['pLabel'] = df['p'].apply(props.get_prop_label)
     props.save_map()
 
     # Return df
