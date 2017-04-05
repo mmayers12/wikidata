@@ -69,7 +69,7 @@ def filter_bad(df, bad_ps=None, bad_os=None):
     if not bad_ps:
         bad_ps = ["topic's main category"]
     if not bad_os:
-        bad_os = ["Wikimedia category", "Wikimedia list article"]
+        bad_os = ["Wikimedia category", "Wikimedia list article", "Wikimedia template"]
 
     out_df = (df.query('pLabel not in {}'.format(bad_ps)).
                  query('oLabel not in {}'.format(bad_os)).

@@ -45,7 +45,7 @@ class Mapping(object):
                 mapp_dict = json.load(fin)
             # Compare what new properties we've looked up to those already in the file
             if set(self.mapp.keys()) - set(mapp_dict.keys()):
-                # This block will run if there's something new in this obj, not in file.
+                # This block will run if there's something in this obj, not already in file.
                 self.mapp.update(mapp_dict)
                 with open(self.file_loc, 'w') as fout:
                     json.dump(self.mapp, fout, indent=2)
@@ -118,7 +118,9 @@ class Entities(Mapping):
         :return: String, the label for the given property (e.g. P31 reutrns 'instance of')
         """
 
+        # Initialzie needed values
         eid = id_from_uri(uri)
+        new_eid = None
 
         # Check to see if the entity is alreay in the file
         if eid in self.mapp:
@@ -129,18 +131,26 @@ class Entities(Mapping):
             # and funny things can happen like merging and duplicaiton
             try:
                 res = requests.get(uri)
-                r_dict = eval(res.text)
-                if eid in r_dict['entities'].keys():
-                    label = r_dict['entities'][eid]['labels']['en']['value']
+                r_dict = json.loads(res.text)
+                if eid in r_dict['entities']:
+                    labels = r_dict['entities'][eid]['labels']
                 else:
                     # Some entities have been merged or renamed, and automatically redirect
                     # to a new value. If so, keep information for both.
                     new_eid = list(r_dict['entities'].keys())[0]
-                    label = r_dict['entities'][new_eid]['labels']['en']['value']
-                    self.mapp[new_eid] = label
+                    labels = r_dict['entities'][new_eid]['labels']
+
+                # Make sure there is an english label (soure of lots of errors)
+                if 'en' in labels:
+                    label = labels['en']['value']
+                else:
+                    label = 'No label defined'
+
 
                 # Add new mapping to the map dictionary
                 self.mapp[eid] = label
+                if new_eid:
+                    self.mapp[new_id] = label
             # If there's an error in this at all, just give back the ID
             except:
                 label = eid
