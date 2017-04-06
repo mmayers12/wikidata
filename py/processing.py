@@ -117,3 +117,60 @@ def class_mapp_dict(df, label = 'label'):
     :return: dict, with keys URIs and values classes for the node
     """
     return df.set_index('s', drop=True).to_dict()[label]
+
+
+def format_nodes_neo(edge_df, col='s'):
+    """
+    Takes a list of edges, and returns a csv of just the nodes, formatted for Neo4j import.
+
+    :param edge_df: Pandas.DataFrame with of the edges to be added to the graph
+    :param col: String, the column uri and label to produce the nodes from
+    :return: Pandas.DataFrame, formatted for neo4j import, ready to be exported to CSV
+    """
+
+    node_out = pd.DataFrame()
+    node_out[':ID'] = edge_df[col].apply(qt.id_from_uri)
+    node_out['identifier:String'] = node_out[':ID']
+    node_out['name:String'] = edge_df[col+'Label']
+    node_out[':LABEL'] = edge_df['type']
+
+    node_out.reset_index(drop=True)
+    return node_out
+
+def nodes_neo_export(edge_df):
+    """
+    Takes a list of edges, filters for only those connected to subject nodes, and returns dataframe
+    with of all the nodes, formatted for neo4j import
+    """
+    # Get a mapping from uri to type
+    type_dict = edge_df.set_index('s')['type'].to_dict()
+
+    # Filter for subject nodes connected to other subject nodes, and only keep unique
+    subject_uri = list(set(edge_df['s']))
+    filt_edges = edge_df.query('o in {!r}'.format(subject_uri))
+    subj_nodes = filt_edges.drop_duplicates(subset='s')
+    subj_nodes = subj_nodes.reset_index(drop=True)
+
+    # Some edges may only be one way, so some objects may not also be in the subject column
+    # in this filtered dataframe
+    obj_nodes = filt_edges.drop_duplicates(subset='o')
+    obj_nodes = obj_nodes.query('o not in {!r}'.format(list(set(subj_nodes['s']))))
+    obj_nodes = obj_nodes.reset_index(drop=True)
+    obj_nodes.loc[:,'type'] = obj_nodes['o'].apply(lambda uri: type_dict[uri])
+
+    # Convert to Neo4j import format and combine
+    subj_out = format_nodes_neo(subj_nodes, col='s')
+    obj_out = format_nodes_neo(obj_nodes, col='o')
+    node_out = pd.concat([subj_out, obj_out]).drop_duplicates()
+    node_out = node_out.reset_index(drop=True)
+
+    return node_out
+
+def edges_to_neo(edge_df):
+    """
+    Takes a list of edges, and returns a csv of the edges, formatted for Neo4j import.
+
+    :param edge_df: Pandas.DataFrame, with the edges to be added to the graph
+    :return: Pandas.DataFrame, formatted for neo4j, import ready to be exported to csv
+    """
+    pass
