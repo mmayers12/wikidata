@@ -85,13 +85,18 @@ def combine_multiclass(df, edge_type="instance of", sep='; '):
     for this gene
 
     :param df: Pandas.DataFrame, the result dataframe where multi-class items will be found
-    :param edge_type: String, the edge type that will be joined for multi-class items
+    :param edge_type: String or list of Strings, the edge type that will be joined for multi-class items
     :param sep: String, the separator for the classes joined
     :return: Pandas.DataFrame, with columns 's' with the uri for the node, and 'label' with the
              new combined label for the node
     """
     # Query and reset the index to create copy
-    df_out = df.query('pLabel == {!r}'.format(edge_type)).reset_index(drop=True)
+    if type(edge_type) == str:
+        df_out = df.query('pLabel == {!r}'.format(edge_type)).reset_index(drop=True)
+    elif type(edge_type) == list:
+        df_out = df.query('pLabel in {!r}'.format(edge_type)).reset_index(drop=True)
+    else:
+        raise TypeError
 
     # Define the function to combine the types
     comb_func = lambda dat: sep.join(list(dat['oLabel']))
@@ -137,10 +142,27 @@ def format_nodes_neo(edge_df, col='s'):
     node_out.reset_index(drop=True)
     return node_out
 
+
+def format_edges_neo(edge_df):
+    """
+
+    """
+    edge_out = pd.DataFrame()
+
+    edge_out[':START_ID'] = edge_df['s'].apply(qt.id_from_uri)
+    edge_out[':END_ID'] = edge_df['o'].apply(qt.id_from_uri)
+    edge_out[':TYPE'] = edge_df['e_type']
+
+    return edge_out
+
+
 def nodes_neo_export(edge_df):
     """
     Takes a list of edges, filters for only those connected to subject nodes, and returns dataframe
     with of all the nodes, formatted for neo4j import
+
+    :param edge_df: Pandas.DataFrame, with the edges to be added to the graph
+    :return: Pandas.DataFrame, formatted for neo4j, import ready to be exported to csv
     """
     # Get a mapping from uri to type
     type_dict = edge_df.set_index('s')['type'].to_dict()
@@ -166,11 +188,39 @@ def nodes_neo_export(edge_df):
 
     return node_out
 
-def edges_to_neo(edge_df):
+
+
+def edges_neo_export(edge_df):
     """
     Takes a list of edges, and returns a csv of the edges, formatted for Neo4j import.
 
     :param edge_df: Pandas.DataFrame, with the edges to be added to the graph
     :return: Pandas.DataFrame, formatted for neo4j, import ready to be exported to csv
     """
-    pass
+    type_dict = edge_df.set_index('s')['type'].to_dict()
+    subject_uri = list(set(edge_df['s']))
+    filt_edges = edge_df.query('o in {!r}'.format(subject_uri))
+
+    # Create an abbreviation dict for fast mapping
+    types = list(set(edge_df['type']))
+    abbrevs = [''.join([w[0].upper() for w in t.split(' ')]) for t in types]
+    abbrev_dict = {t:a for t,a in zip(types, abbrevs)}
+
+    def get_edge_type(row):
+        # Get abbreviaton for edge start type and end type
+        start_type = type_dict[row['s']]
+        start_abbrev = abbrev_dict[start_type]
+        end_type = type_dict[row['o']]
+        end_abbrev = abbrev_dict[end_type]
+
+        # Example 'Compound' -physically interacts with-> 'Protein' becomes:
+        # 'physically-interacts-with_CpP'
+        return row['pLabel'].replace(' ', '-') + '_'+ start_abbrev + row['pLabel'][0] + end_abbrev
+
+    edge_out = pd.DataFrame()
+    edge_out[':START_ID'] = filt_edges['s'].apply(qt.id_from_uri)
+    edge_out[':END_ID'] = filt_edges['o'].apply(qt.id_from_uri)
+    edge_out[':TYPE'] = filt_edges.apply(get_edge_type, axis = 1)
+
+    return edge_out
+
