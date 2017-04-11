@@ -1,0 +1,44 @@
+[
+  {
+    "name": "wikidata-v0.1",
+    "binary": "/home/mmayers/projects/wikidata/neo/neo4j-community-3.1.3_wikidata-v0.1/bin/neo4j",
+    "path": "/home/mmayers/projects/wikidata/neo/neo4j-community-3.1.3_wikidata-v0.1",
+    "directory": "neo4j-community-3.1.3_wikidata-v0.1",
+    "port": 7500
+  },
+  {
+    "name": "wikidata-v0.1_perm-1",
+    "binary": "/home/mmayers/projects/wikidata/neo/neo4j-community-3.1.3_wikidata-v0.1_perm-1/bin/neo4j",
+    "path": "/home/mmayers/projects/wikidata/neo/neo4j-community-3.1.3_wikidata-v0.1_perm-1",
+    "directory": "neo4j-community-3.1.3_wikidata-v0.1_perm-1",
+    "port": 7501
+  },
+  {
+    "name": "wikidata-v0.1_perm-2",
+    "binary": "/home/mmayers/projects/wikidata/neo/neo4j-community-3.1.3_wikidata-v0.1_perm-2/bin/neo4j",
+    "path": "/home/mmayers/projects/wikidata/neo/neo4j-community-3.1.3_wikidata-v0.1_perm-2",
+    "directory": "neo4j-community-3.1.3_wikidata-v0.1_perm-2",
+    "port": 7502
+  },
+  {
+    "name": "wikidata-v0.1_perm-3",
+    "binary": "/home/mmayers/projects/wikidata/neo/neo4j-community-3.1.3_wikidata-v0.1_perm-3/bin/neo4j",
+    "path": "/home/mmayers/projects/wikidata/neo/neo4j-community-3.1.3_wikidata-v0.1_perm-3",
+    "directory": "neo4j-community-3.1.3_wikidata-v0.1_perm-3",
+    "port": 7503
+  },
+  {
+    "name": "wikidata-v0.1_perm-4",
+    "binary": "/home/mmayers/projects/wikidata/neo/neo4j-community-3.1.3_wikidata-v0.1_perm-4/bin/neo4j",
+    "path": "/home/mmayers/projects/wikidata/neo/neo4j-community-3.1.3_wikidata-v0.1_perm-4",
+    "directory": "neo4j-community-3.1.3_wikidata-v0.1_perm-4",
+    "port": 7504
+  },
+  {
+    "name": "wikidata-v0.1_perm-5",
+    "binary": "/home/mmayers/projects/wikidata/neo/neo4j-community-3.1.3_wikidata-v0.1_perm-5/bin/neo4j",
+    "path": "/home/mmayers/projects/wikidata/neo/neo4j-community-3.1.3_wikidata-v0.1_perm-5",
+    "directory": "neo4j-community-3.1.3_wikidata-v0.1_perm-5",
+    "port": 7505
+  }
+]
