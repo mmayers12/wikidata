@@ -40,7 +40,7 @@ def is_running(instance):
     """
     process = subprocess.run([instance['binary'], 'status'], stdout=subprocess.PIPE)
     stdout = str(process.stdout, sys.stdout.encoding).rstrip()
-    match = re.match(r'Neo4j Server is running', stdout)
+    match = re.match(r'Neo4j is running', stdout)
     return stdout if match else False
 
 def start_server(instance):
@@ -54,7 +54,7 @@ def start_server(instance):
         return running
     process = subprocess.run([instance['binary'], 'start'], stdout=subprocess.PIPE)
     stdout = str(process.stdout, sys.stdout.encoding)
-    match = re.search(r'process \[([0-9]+)\]', stdout)
+    match = re.search(r'pid ([0-9]+)', stdout)
     instance['pid'] = int(match.group(1))
     return stdout
 
