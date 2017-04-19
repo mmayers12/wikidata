@@ -4,6 +4,7 @@ cheroot==5.1.0
 CherryPy==10.1.0
 decorator==4.0.11
 entrypoints==0.2.2
+hetio==0.2.6
 html5lib==0.9999999
 httplib2==0.10.3
 ipykernel==4.5.2
@@ -25,6 +26,7 @@ mock-http==1.0
 nbconvert==5.1.1
 nbformat==4.2.0
 notebook==5.0.0b1
+numexpr==2.6.2
 numpy==1.12.0
 packaging==16.8
 pandas==0.19.2
@@ -43,14 +45,18 @@ pytz==2016.10
 pyzmq==16.0.2
 qtconsole==4.2.1
 rdflib==4.2.2
+regex==2017.4.5
 requests==2.13.0
 simplegeneric==0.8.1
 simplejson==3.10.0
 six==1.10.0
+tables==3.3.0
 tempora==1.6.1
 terminado==0.6
 testpath==0.3
 tornado==4.4.2
+tqdm==4.11.2
 traitlets==4.3.1
 wcwidth==0.1.7
 widgetsnbextension==2.0.0b19
+xmltodict==0.10.2
