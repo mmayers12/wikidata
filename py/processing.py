@@ -145,7 +145,10 @@ def format_nodes_neo(edge_df, col='s'):
 
 def format_edges_neo(edge_df):
     """
+    Takes a list of edges, and converts the format to a neo4j importable csv
 
+    :param edge_df: Pandas.DataFrame, with edges ready to be added to the graph
+    :return: Pandas.DataFrame, formatted for neo4j
     """
     edge_out = pd.DataFrame()
 
