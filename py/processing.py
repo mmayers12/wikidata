@@ -395,8 +395,22 @@ def get_abbrev_dict(edge_df):
     return {**node_abbrev_dict, **edge_abbrev_dict}
 
 
-def get_metaedge_tuples(edge_df, node_type_dict):
-    pass
+def get_metaedge_tuples(edge_df, node_type_dict, reciprocal_relations=None, forward_edges=None):
+    from itertools import chain
+    def get_tuple(row):
 
+        start_kind = node_type_dict[row['s']]
+        end_kind = node_type_dict[row['o']]
+        edge = row['e_type'].split('_')[0]
 
+        if reciprocal_relations:
+            if row['e_type'] in chain(*reciprocal_relations):
+                direction = 'both'
+            else:
+                direction = 'forward'
+        else:
+            direction = 'both'
 
+        return start_kind, end_kind, edge, direction
+
+    return list(edge_df.apply(get_tuple))
