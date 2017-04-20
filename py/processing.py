@@ -203,8 +203,7 @@ def filter_untyped_nodes(edge_df):
     return filt_edges
 
 
-def get_edge_types(edge_df):
-    node_type_dict = get_node_type_dict(edge_df, 'type')
+def get_edge_types(edge_df, node_type_dict):
     abbrev_dict = get_abbrev_dict(edge_df)
 
     def get_edge_type(row):
@@ -351,10 +350,13 @@ def prep_for_export(edge_df):
     :return: Pandas.DataFrame, formatted for neo4j, import ready to be exported to csv
     """
 
+    # Get node types first
+    node_type_dict = get_node_type_dict(edge_df, 'type')
+
     # Filter the edges
     filt_edges = filter_untyped_nodes(edge_df)
     # Get their types
-    filt_edges['e_type'] = get_edge_types(filt_edges)
+    filt_edges['e_type'] = get_edge_types(filt_edges, node_type_dict)
     # Remove the edges with low counts
     filt_edges = remove_low_count_edges(filt_edges)
 
