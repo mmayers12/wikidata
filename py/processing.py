@@ -220,10 +220,11 @@ def get_edge_types(edge_df, node_type_dict):
         # 'physically-interacts-with_CpiwP'
         return edge_type + '_' + start_abbrev + edge_abbrev + end_abbrev
 
-    return edge_df.apply(get_edge_type, axis=1)
+    edge_types = edge_df.apply(get_edge_type, axis=1)
+    return edge_types
 
 
-def remove_low_count_edges(edge_df, cutoff=.1):
+def remove_low_count_edges(edge_df, node_types=None, cutoff=.01):
     """
     Removes the low count edges from the edge dataframe
 
@@ -231,20 +232,30 @@ def remove_low_count_edges(edge_df, cutoff=.1):
     :param cutoff:
     :return:
     """
+    from collections import Counter
     # Make sure edges have been typed, if not, type them
     if 'e_type' not in edge_df:
         edge_df['e_type'] = get_edge_types(edge_df)
 
     # Get counts for edge and node types
     edge_type_counts = edge_df['e_type'].value_counts()
-    node_type_counts = edge_df['type'].value_counts()
+
+    # Provides a more accurate count
+    if node_types:
+        nodes = set(edge_df['s']).union(set(edge_df['o']))
+        node_type_counts = Counter()
+        for node in nodes:
+            node_type_counts[node_types[node]] += 1
+    else:
+        # A close approximation if types for the objects are not provided
+        node_type_counts = edge_df.drop_duplicates('s')['type'].value_counts()
 
     # Generate an edge to node mapping
     edge_to_node_mapping = edge_df.set_index('e_type')['type'].to_dict()
 
     # Find the valid edges
     valid_edges = []
-    for edge_type, count in edge_type_counts:
+    for edge_type, count in edge_type_counts.to_dict().items():
         node_type = edge_to_node_mapping[edge_type]
         # Keep if there are more than the cuttoff percentage of nodes
         if count >= cutoff * node_type_counts[node_type]:
@@ -337,9 +348,9 @@ def remove_reciprocals(edge_df, reciprocal_types):
         swapped['e_type'] = types[0]
 
         # Apply the changes
-        edge_copy.loc[edge_df[':TYPE'] == types[1]] = swapped
+        edge_copy.loc[edge_df['e_type'] == types[1]] = swapped
 
-    return edge_copy.drop_duplicates()
+    return edge_copy.drop_duplicates(subset=['s','o', 'e_type'])
 
 
 def prep_for_export(edge_df):
@@ -358,7 +369,7 @@ def prep_for_export(edge_df):
     # Get their types
     filt_edges['e_type'] = get_edge_types(filt_edges, node_type_dict)
     # Remove the edges with low counts
-    filt_edges = remove_low_count_edges(filt_edges)
+    filt_edges = remove_low_count_edges(filt_edges, node_type_dict)
 
     # Remove reciprocal relationships
     pair_list = get_pair_lists(filt_edges)
