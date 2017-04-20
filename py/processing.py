@@ -124,7 +124,7 @@ def get_node_type_dict(df, label = 'label'):
     return df.set_index('s', drop=True).to_dict()[label]
 
 
-def format_nodes_neo(edge_df, col='s'):
+def format_nodes_neo(edge_df, type_dict):
     """
     Takes a list of edges, and returns a csv of just the nodes, formatted for Neo4j import.
 
@@ -134,11 +134,13 @@ def format_nodes_neo(edge_df, col='s'):
     """
 
     node_out = pd.DataFrame()
-    node_out[':ID'] = edge_df[col].apply(qt.id_from_uri)
+    node_out[':ID'] = pd.concat([edge_df['s'], edge_df['o']])
+    node_out[':LABEL'] = node_out[':ID'].apply(lambda u: type_dict[u])
+    node_out[':ID'] = node_out[':ID'].apply(qt.id_from_uri)
     node_out['identifier:String'] = node_out[':ID']
-    node_out['name:String'] = edge_df[col+'Label']
-    node_out[':LABEL'] = edge_df['type']
+    node_out['name:String'] = pd.concat([edge_df['sLabel'], edge_df['oLabel']])
 
+    node_out = node_out[[':ID', 'identifier:String', 'name:String', ':LABEL']].drop_duplicates()
     node_out.reset_index(drop=True)
     return node_out
 
@@ -393,6 +395,8 @@ def get_abbrev_dict(edge_df):
     return {**node_abbrev_dict, **edge_abbrev_dict}
 
 
-def get_metaedge_tuples():
+def get_metaedge_tuples(edge_df, node_type_dict):
     pass
+
+
 
