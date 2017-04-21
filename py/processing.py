@@ -294,7 +294,7 @@ def invert_pairs(pair_list):
     return [(b, a) for (a, b) in pair_list]
 
 
-def calc_overlap(pair_list, invert_list, cutoff=.9):
+def calc_overlap(pair_list, invert_list, cutoff=0.5):
     count_a, count_b = 0, 0
 
     # if there is a large difference in size, don't bother checking
@@ -303,19 +303,14 @@ def calc_overlap(pair_list, invert_list, cutoff=.9):
         return 0
 
     # Check both directions
-    for pair in pair_list:
-        if pair in invert_list:
-            count_a += 1
-
-    for pair in invert_list:
-        if pair in pair_list:
-            count_b += 1
+    count_a = len(set(pair_list).intersection(set(invert_list)))
+    count_b = len(set(invert_list).intersection(set(pair_list)))
 
     # Return the minimum overlap
     return min(count_a / len(pair_list), count_b / len(invert_list))
 
 
-def find_reciprocal_relations(pair_list, cutoff=0.9):
+def find_reciprocal_relations(pair_list, cutoff=0.5):
     invert_list = {key: invert_pairs(value) for key, value in pair_list.items()}
     kinds = list(pair_list.keys())
 
@@ -323,18 +318,20 @@ def find_reciprocal_relations(pair_list, cutoff=0.9):
 
     # Only compare 2 different relationship types once
     for i, kind in enumerate(kinds):
-        for idx in range(i + 1, len(kinds)):
+        for idx in range(i, len(kinds)):
             overlap = calc_overlap(pair_list[kind], invert_list[kinds[idx]])
             if overlap > cutoff:
                 reciprocal_types.append([kind, kinds[idx]])
 
+    reciprocal_types = [sorted(t, key=lambda x: len(x)) for t in reciprocal_types]
     return reciprocal_types
 
 
 def remove_reciprocals(edge_df, reciprocal_types):
     edge_copy = edge_df.copy()
 
-    for types in reciprocal_types:
+
+    def swap_reciprocals(types):
         # Make a copy of the subsection
         swapped = edge_copy.loc[edge_df['e_type'] == types[1]].copy()
 
@@ -348,9 +345,19 @@ def remove_reciprocals(edge_df, reciprocal_types):
 
         # Change the edge type
         swapped['e_type'] = types[0]
+        return swapped
 
-        # Apply the changes
-        edge_copy.loc[edge_df['e_type'] == types[1]] = swapped
+    def remove_bidirectional(types):
+        start = list(sub_group['s'])
+        end = list(sub_group['o'])
+
+
+    for types in reciprocal_types:
+        # Relationship is bidirectional
+        if types[0] == types[1]:
+            continue
+        else:
+            edge_copy.loc[edge_df['e_type'] == types[1]] = swap_reciprocals(types)
 
     return edge_copy.drop_duplicates(subset=['s','o', 'e_type'])
 
@@ -413,4 +420,4 @@ def get_metaedge_tuples(edge_df, node_type_dict, reciprocal_relations=None, forw
 
         return start_kind, end_kind, edge, direction
 
-    return list(edge_df.apply(get_tuple))
+    return list(edge_df.apply(get_tuple, axis=1).unique())
