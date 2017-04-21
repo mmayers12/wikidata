@@ -347,15 +347,30 @@ def remove_reciprocals(edge_df, reciprocal_types):
         swapped['e_type'] = types[0]
         return swapped
 
-    def remove_bidirectional(types):
-        start = list(sub_group['s'])
-        end = list(sub_group['o'])
+    def remove_duplicates(sub_group):
+        sub_group['tuples'] = list(zip(sub_group['s'], sub_group['o']))
 
+        edge_tups = list(sub_group['tuples'])
+        to_keep = []
+        while len(edge_tups) > 0:
+            tup = edge_tups.pop()
+            inverse = (tup[1], tup[0])
+            if inverse in edge_tups:
+                edge_tups.remove(inverse)
+            to_keep.append(tup)
+
+        idx = sub_group['tuples'].isin(to_keep)
+        new_sub = sub_group.loc[idx]
+
+        return new_sub.drop('tuples', axis=1)
 
     for types in reciprocal_types:
         # Relationship is bidirectional
         if types[0] == types[1]:
-            continue
+            sub_group = edge_copy.loc[edge_df['e_type'] == types[0]].copy()
+            new_sub = remove_duplicates(sub_group)
+            edge_copy.drop(sub_group.index, axis=0, inplace=True)
+            edge_copy = pd.concat([edge_copy, new_sub]).reset_index(drop=True)
         else:
             edge_copy.loc[edge_df['e_type'] == types[1]] = swap_reciprocals(types)
 
@@ -374,7 +389,7 @@ def prep_for_export(edge_df):
     node_type_dict = get_node_type_dict(edge_df, 'type')
 
     # Filter the edges
-    filt_edges = filter_untyped_nodes(edge_df)
+    filt_edges = filter_untyped_nodes(edge_df).copy()
     # Get their types
     filt_edges['e_type'] = get_edge_types(filt_edges, node_type_dict)
     # Remove the edges with low counts
