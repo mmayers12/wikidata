@@ -333,7 +333,7 @@ def remove_reciprocals(edge_df, reciprocal_types):
 
     def swap_reciprocals(types):
         # Make a copy of the subsection
-        swapped = edge_copy.loc[edge_df['e_type'] == types[1]].copy()
+        swapped = edge_copy.loc[edge_copy['e_type'] == types[1]].copy()
 
         # Swap URIs and Labels
         tmp_uri = swapped['s'].copy()
@@ -367,12 +367,12 @@ def remove_reciprocals(edge_df, reciprocal_types):
     for types in reciprocal_types:
         # Relationship is bidirectional
         if types[0] == types[1]:
-            sub_group = edge_copy.loc[edge_df['e_type'] == types[0]].copy()
+            sub_group = edge_copy[edge_copy['e_type'] == types[0]].copy()
             new_sub = remove_duplicates(sub_group)
             edge_copy.drop(sub_group.index, axis=0, inplace=True)
             edge_copy = pd.concat([edge_copy, new_sub]).reset_index(drop=True)
         else:
-            edge_copy.loc[edge_df['e_type'] == types[1]] = swap_reciprocals(types)
+            edge_copy.loc[edge_copy['e_type'] == types[1]] = swap_reciprocals(types)
 
     return edge_copy.drop_duplicates(subset=['s','o', 'e_type'])
 
