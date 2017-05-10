@@ -8,6 +8,7 @@ venv
 nohup.out
 qc
 neo4j-community-*
+*.report
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
