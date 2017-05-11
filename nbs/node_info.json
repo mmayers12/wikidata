@@ -1,0 +1,20 @@
+{
+  "Mature MicroRNA": "data/mirna.txt",
+  "Symptom": "data/symptoms.txt",
+  "Gene": "data/other_genes.txt",
+  "Active Site": "data/active_site.txt",
+  "Binding Site": "data/binding_site.txt",
+  "Protein Domain": "data/p_domain.txt",
+  "Structural Motif": "data/s_motif.txt",
+  "Protein-coding Gene": "data/pc_genes.txt",
+  "Supersecondary Structure": "data/ss_struct.txt",
+  "Compound": "data/compounds.txt",
+  "Post-translational Modification": "data/ptm.txt",
+  "Pseudogene": "data/pseu_genes.txt",
+  "Disease": "data/disease.txt",
+  "Non-coding RNA": "data/ncr_genes.txt",
+  "GO Term": "data/go_terms.txt",
+  "Protein Family": "data/p_fams.txt",
+  "Chemical Hazard": "data/chem_hazard.txt",
+  "Protein": "data/proteins.txt"
+}
