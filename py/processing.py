@@ -377,30 +377,34 @@ def remove_reciprocals(edge_df, reciprocal_types):
     return edge_copy.drop_duplicates(subset=['s','o', 'e_type'])
 
 
-def prep_for_export(edge_df):
+def prep_for_export(edge_df, overlap_cutoff=0.5, edge_cutoff=0.01):
     """
     Takes a list of edges, and returns a csv of the edges, formatted for Neo4j import.
 
     :param edge_df: Pandas.DataFrame, with the edges to be added to the graph
     :return: Pandas.DataFrame, formatted for neo4j, import ready to be exported to csv
     """
+    import re
 
     # Get node types first
     node_type_dict = get_node_type_dict(edge_df, 'type')
+
+    # Remove some special Characters from edge labels
+    edge_df['pLabel'] = edge_df['pLabel'].apply(lambda s: re.sub('[^a-zA-Z0-9-_*.]', '', s))
 
     # Filter the edges
     filt_edges = filter_untyped_nodes(edge_df).copy()
     # Get their types
     filt_edges['e_type'] = get_edge_types(filt_edges, node_type_dict)
     # Remove the edges with low counts
-    filt_edges = remove_low_count_edges(filt_edges, node_type_dict)
+    filt_edges = remove_low_count_edges(filt_edges, node_type_dict, edge_cutoff)
 
     # Remove reciprocal relationships
     pair_list = get_pair_lists(filt_edges)
-    reciprocal_types = find_reciprocal_relations(pair_list)
+    reciprocal_types = find_reciprocal_relations(pair_list, overlap_cutoff)
     filt_edges = remove_reciprocals(filt_edges, reciprocal_types)
 
-    return filt_edges
+    return filt_edges, node_type_dict, reciprocal_types
 
 
 def get_abbrev_dict(edge_df):
@@ -436,3 +440,58 @@ def get_metaedge_tuples(edge_df, node_type_dict, reciprocal_relations=None, forw
         return start_kind, end_kind, edge, direction
 
     return list(edge_df.apply(get_tuple, axis=1).unique())
+
+def prep_hetio(edge_df, node_types, reciprocal_relations, save_dir='data'):
+    """
+    Preps a filtered edge_df unconverted, as well as the reciprocal relations and
+    metaedge tuples, then produces all the files needed for hetio import and learn pipeline.
+
+    :param edge_df: Pandas.DataFrame, filtered edge dataframedata frame containing edges, output of prep_for_export
+    :param node_types: dict, key=uri, value=node_type, output of get_node_types or prep_for_export
+    :param_reciprocal_relations: nested list, output of find_reciprocal_relations, or prep_for_export
+    :return: None
+
+    """
+    import os
+    from hetio.hetnet import MetaGraph, Graph
+    from hetio.readwrite import write_metagraph
+    from hetio.stats import degrees_to_excel, get_metaedge_style_df
+
+    def add_node_from_row(row):
+        graph.add_node(kind = row[':LABEL'], identifier=row[':ID'], name=row['name:String'])
+
+    def add_edge_from_row(row):
+        start_id = (node_types_id[row[':START_ID']], row[':START_ID'])
+        end_id = (node_types_id[row[':END_ID']], row[':END_ID'])
+        kind = row[':TYPE'].split('_')[0]
+        graph.add_edge(start_id, end_id, kind, dir_dict[kind])
+
+    # Get metaedge tuples and abbreviation dicts to build the metagraph
+    metaedge_tuples = get_metaedge_tuples(edge_df, node_types, reciprocal_relations)
+    abbrev_dict = get_abbrev_dict(edge_df)
+
+    metagraph = MetaGraph.from_edge_tuples(metaedge_tuples, abbrev_dict)
+
+    # Format new dicts needed for mappings
+    node_types_id = {qt.id_from_uri(k):v for k,v in node_types.items()}
+    dir_dict = {x[2]: x[3] for x in metaedge_tuples}
+
+    # Get the neo formatted version of nodes and edges (ensure exact match)
+    neo_nodes = format_nodes_neo(edge_df, node_types)
+    neo_edges = format_edges_neo(edge_df)
+
+    # Initialize graph and add nodes and edges
+    graph = Graph(metagraph)
+    neo_nodes.apply(add_node_from_row, axis=1)
+    neo_edges.apply(add_edge_from_row, axis=1)
+
+    print('Added {} nodes to graph'.format(len(list(graph.get_nodes()))))
+    print('Added {} edges to graph'.format(len(list(graph.get_edges()))))
+
+    # Save Files
+    filename = os.path.join(save_dir, 'degrees.xlsx')
+    degrees_to_excel(graph, filename)
+
+    filename = os.path.join(save_dir, 'metaedge-styles.tsv')
+    metaedge_style_df = get_metaedge_style_df(metagraph)
+    metaedge_style_df.to_csv(filename, sep='\t', index=False)

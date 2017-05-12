@@ -10,7 +10,7 @@
   "Supersecondary Structure": "data/ss_struct.txt",
   "Compound": "data/compounds.txt",
   "Post-translational Modification": "data/ptm.txt",
-  "Pseudogene": "data/pseu_genes.txt",
+  "Pseudo Gene": "data/pseu_genes.txt",
   "Disease": "data/disease.txt",
   "Non-coding RNA": "data/ncr_genes.txt",
   "GO Term": "data/go_terms.txt",
