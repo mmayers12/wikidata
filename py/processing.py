@@ -1,116 +1,6 @@
 import sparql_tools as qt
 import pandas as pd
-
-
-def fix_categoires(df):
-    """
-    Takes a query result as a Pandas DataFrame and converts WikiData Category items into
-    the category itself by following the 'category's main topic' edge
-
-    :param df: Pandas.DataFrame, The query result dataframe to be altered
-    :return: Pandas.DataFrame, the dataframe with corrected categories
-    """
-    # copy the dataframe to avoid mutation
-    df_out = df.copy()
-
-    # text to query for the new categories
-    query_text = """
-    SELECT distinct ?s ?sLabel ?p ?o ?oLabel
-    WHERE
-    {{
-        values ?s {{wd:{}}}
-        # Category's Main Topic
-        values ?p {{wdt:P301}}
-        # Get edges and object nodes
-        ?s ?p ?o .
-        # Make sure using direct properties
-        FILTER REGEX(STR(?p), "prop/direct")
-        FILTER REGEX(STR(?o), "entity/Q")
-        # Make sure object nodes (o) have there own edges and nodes
-        ?o ?p2 ?o2 .
-        SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en" }}
-    }}"""
-
-    # Get indicies of the catgories
-    idx = df_out['oLabel'].str.contains('Category:')
-
-    # Take the catgories and get their uris and labels
-    cat_uri = list(set(df_out[idx]['o']))
-    categories = [qt.id_from_uri(cat) for cat in cat_uri]
-
-    # Query along the "category's main topic" edge
-    result = qt.query_from_list(categories, query_text=query_text)
-
-    # Create a dictionary to map to new category names
-    map_dict = result.set_index('s', drop=True).to_dict()
-
-    # Map the new uris and labels
-    to_change = df_out[idx]
-    uri = to_change['o'].apply(lambda v: map_dict['o'][v] if v in map_dict['o'].keys() else v)
-    label = to_change['o'].apply(lambda v: map_dict['oLabel'][v] if v in map_dict['oLabel'].keys() else v)
-
-    df_out.loc[idx, 'o'] = uri
-    df_out.loc[idx, 'oLabel'] = label
-
-    return df_out
-
-
-def filter_bad(df, bad_ps=None, bad_os=None):
-    """
-    Filters out predicates and objects determiend to be unimportant to the graph
-
-    :param df: Pandas.DataFrame, the query result dataframe from which the bad lines are to be filtered
-    :param bad_ps: List, the list of bad predicates to be removed
-    :param bad_os: List, the list of bad objects to be removed
-    :return: Pandas.DataFrame, the datafame with the unwanted lines removed
-    """
-
-    # initialzie the items to be filtered if no arguments are passed
-    if not bad_ps:
-        bad_ps = ["topic's main category"]
-    if not bad_os:
-        bad_os = ["Wikimedia category", "Wikimedia list article", "Wikimedia template"]
-
-    out_df = (df.query('pLabel not in {}'.format(bad_ps)).
-                 query('oLabel not in {}'.format(bad_os)).
-                 reset_index(drop=True))
-    return out_df
-
-
-def combine_multiclass(df, edge_type="instance of", sep='; '):
-    """
-    Function to combine the objects of edges of a certain type into 1 string.
-    Example: gene 'IZUMO4' has 'insance of' edges to 'gene' and 'protein-coding gene'
-    this function run with default settings will return 'gene; protein-coding gene'
-    for this gene
-
-    :param df: Pandas.DataFrame, the result dataframe where multi-class items will be found
-    :param edge_type: String or list of Strings, the edge type that will be joined for multi-class items
-    :param sep: String, the separator for the classes joined
-    :return: Pandas.DataFrame, with columns 's' with the uri for the node, and 'label' with the
-             new combined label for the node
-    """
-    # Query and reset the index to create copy
-    if type(edge_type) == str:
-        df_out = df.query('pLabel == {!r}'.format(edge_type)).reset_index(drop=True)
-    elif type(edge_type) == list:
-        df_out = df.query('pLabel in {!r}'.format(edge_type)).reset_index(drop=True)
-    else:
-        raise TypeError
-
-    # Define the function to combine the types
-    comb_func = lambda dat: sep.join(list(dat['oLabel']))
-
-    # Combine the types
-    df_out = (df_out.
-                sort_values(['s', 'oLabel'])[['s', 'oLabel']].
-                groupby('s').
-                apply(comb_func).
-                to_frame().
-                reset_index().
-                rename(columns={0:'label'}))
-
-    return df_out
+import os
 
 
 def get_node_type_dict(df, label = 'label'):
@@ -161,37 +51,6 @@ def format_edges_neo(edge_df):
     return edge_out
 
 
-def nodes_neo_export(edge_df):
-    """
-    Takes a list of edges, filters for only those connected to subject nodes, and returns dataframe
-    with of all the nodes, formatted for neo4j import
-
-    :param edge_df: Pandas.DataFrame, with the edges to be added to the graph
-    :return: Pandas.DataFrame, formatted for neo4j, import ready to be exported to csv
-    """
-    # Get a mapping from uri to type
-    type_dict = get_node_type_dict(edge_df, 'type')
-
-    # Filter for subject nodes connected to other subject nodes, and only keep unique
-    filt_edges = filter_untyped_nodes(edge_df)
-    subj_nodes = filt_edges.drop_duplicates(subset='s')
-    subj_nodes = subj_nodes.reset_index(drop=True)
-
-    # Some edges may only be one way, so some objects may not also be in the subject column
-    # in this filtered dataframe
-    obj_nodes = filt_edges.drop_duplicates(subset='o')
-    obj_nodes = obj_nodes.query('o not in {!r}'.format(list(set(subj_nodes['s']))))
-    obj_nodes = obj_nodes.reset_index(drop=True)
-    obj_nodes.loc[:,'type'] = obj_nodes['o'].apply(lambda uri: type_dict[uri])
-
-    # Convert to Neo4j import format and combine
-    subj_out = format_nodes_neo(subj_nodes, col='s')
-    obj_out = format_nodes_neo(obj_nodes, col='o')
-    node_out = pd.concat([subj_out, obj_out]).drop_duplicates()
-    node_out = node_out.reset_index(drop=True)
-
-    return node_out
-
 def filter_untyped_nodes(edge_df):
     """
     Filter out edges that point to objects not in the list of subjects
@@ -200,13 +59,20 @@ def filter_untyped_nodes(edge_df):
     :return: Pandas.DataFrame, with bad edges removed
     """
     subject_uri = list(set(edge_df['s']))
-    filt_edges = edge_df.query('o in {!r}'.format(subject_uri))
+    filt_edges = edge_df.query('o in {!r}'.format(subject_uri)).reset_index(drop=True)
 
     return filt_edges
 
 
 def get_edge_types(edge_df, node_type_dict):
-    abbrev_dict = get_abbrev_dict(edge_df)
+    """
+    Given an edge dataframe and a dictionary of node types, returns the edge types as a Series.
+
+    :param edge_df: pandas.DataFrame, edges, with untyped nodes filtered out.
+    :param node_type_dict: dictionary, keys are node uri, values, the type
+    :return: pandas.Series, the edge types
+    """
+    abbrev_dict = get_abbrev_dict(edge_df, node_type_dict)
 
     def get_edge_type(row):
         # Get types and abbreviations for edge start type and end type
@@ -226,49 +92,57 @@ def get_edge_types(edge_df, node_type_dict):
     return edge_types
 
 
-def remove_low_count_edges(edge_df, node_types=None, cutoff=.01):
+def remove_low_count_edges(edge_df, node_types, cutoff=.01):
     """
-    Removes the low count edges from the edge dataframe
+    Removes edges of low degree in comparison to the amount of nodes of a given type, as compared to the
+    node of less abundant type.
 
-    :param edge_df:
-    :param cutoff:
-    :return:
+    :param edge_df: pandas.DataFrame, with untyped object nodes filtered out.
+    :param node_types: dictionary, with keys node uri, and values node type
+    :param cutoff: float, a minimum fraction of edges per node for a given edge type
+    :return: pandas.DataFrame, with all edges that do not meet the cutoff removed.
     """
     from collections import Counter
+    # Copy dataframe to avoid mutation
+    edge_df_c = edge_df.copy()
+    
     # Make sure edges have been typed, if not, type them
-    if 'e_type' not in edge_df:
-        edge_df['e_type'] = get_edge_types(edge_df)
+    if 'e_type' not in edge_df_c:
+        edge_df_c['e_type'] = get_edge_types(edge_df_c)
 
     # Get counts for edge and node types
-    edge_type_counts = edge_df['e_type'].value_counts()
+    edge_type_counts = edge_df_c['e_type'].value_counts()
 
-    # Provides a more accurate count
-    if node_types:
-        nodes = set(edge_df['s']).union(set(edge_df['o']))
-        node_type_counts = Counter()
-        for node in nodes:
-            node_type_counts[node_types[node]] += 1
-    else:
-        # A close approximation if types for the objects are not provided
-        node_type_counts = edge_df.drop_duplicates('s')['type'].value_counts()
+    # Count the number of unique nodes of each type
+    nodes = set(edge_df_c['s']).union(set(edge_df_c['o']))
+    node_type_counts = Counter()
+    for node in nodes:
+        node_type_counts[node_types[node]] += 1
 
-    # Generate an edge to node mapping
-    edge_to_node_mapping = edge_df.set_index('e_type')['type'].to_dict()
+    # Make a mapping of start and end node types
+    edge_to_start_mapping = edge_df_c.set_index('e_type')['s'].apply(lambda x: node_types[x]).to_dict()
+    edge_to_end_mapping = edge_df_c.set_index('e_type')['o'].apply(lambda x: node_types[x]).to_dict()
 
     # Find the valid edges
     valid_edges = []
-    for edge_type, count in edge_type_counts.to_dict().items():
-        node_type = edge_to_node_mapping[edge_type]
-        # Keep if there are more than the cuttoff percentage of nodes
-        if count >= cutoff * node_type_counts[node_type]:
+    for edge_type, edge_count in edge_type_counts.to_dict().items():
+        # Take the start and end node types
+        start_type = edge_to_start_mapping[edge_type]
+        end_type = edge_to_end_mapping[edge_type]
+        # Find which one is smaller
+        node_count = min(node_type_counts[start_type], node_type_counts[end_type])
+
+        # keep if the there are more edges than the cutoff percentage ot the node count
+        if edge_count >= cutoff * node_count:
             valid_edges.append(edge_type)
 
-    return edge_df.query('e_type in {}'.format(valid_edges)).reset_index(drop=True)
+    return edge_df_c.query('e_type in {}'.format(valid_edges)).reset_index(drop=True)
 
 
 def get_pair_lists(edge_df):
     """
-    Takes edge list dataframe and converts to a dictionary of pair lists
+    Takes edge dataframe and converts to a dictionary of pair lists, with keys edge type, and values a list
+    of tuples, first value edge start URI and second value edge end URI.
 
     :param edge_df: pandas.DataFrame edge list with node and edge types included
     :return: Dictionary, key is edge type, value, list of tuples, URIs of start and end nodes for given edge
@@ -291,11 +165,25 @@ def get_pair_lists(edge_df):
 
 
 def invert_pairs(pair_list):
+    """
+    Takes a pair list and swaps start and end URIs for all pairs.
+
+    :param pair_list: list of tuples, Start and End URIs for each edge of a given type
+    :return: list of tuples, with start and end URIs inverted.
+    """
     return [(b, a) for (a, b) in pair_list]
 
 
 def calc_overlap(pair_list, invert_list, cutoff=0.5):
-    count_a, count_b = 0, 0
+    """
+    Given two edge pairs, calculates the overlap percentage of the two lists. This is
+    used to see if the two pair lists represent a reciprocal relationship.
+
+    :param pair_list: List of tuples, the start and end URIs for a give edge type
+    :param invert_list: List of tuples, the result of invert_pairs of a pair list
+    :param cutoff: float, fraction of edges that must overlap between the two lists
+    :return: the minimum overlap.
+    """
 
     # if there is a large difference in size, don't bother checking
     if (len(pair_list) / len(invert_list) < cutoff or
@@ -311,6 +199,14 @@ def calc_overlap(pair_list, invert_list, cutoff=0.5):
 
 
 def find_reciprocal_relations(pair_list, cutoff=0.5):
+    """
+    Finds out which edges types are opposites of each other, using a certain cutoff for overlap percetage.
+    0.5 is fairly permissive, however most edges are either exactly, or very near 0 or very near 1.
+
+    :param pair_list: dictionary, key = edge type, and value is a list of tuples, with start and end URIs for the edge
+    :param cutoff: float, the minimum fraction of overlap between edges to be considered recipcrocal
+    :return: list of lists, with the two edge types found to be reciprocal to each other
+    """
     invert_list = {key: invert_pairs(value) for key, value in pair_list.items()}
     kinds = list(pair_list.keys())
 
@@ -320,7 +216,7 @@ def find_reciprocal_relations(pair_list, cutoff=0.5):
     for i, kind in enumerate(kinds):
         for idx in range(i, len(kinds)):
             overlap = calc_overlap(pair_list[kind], invert_list[kinds[idx]])
-            if overlap > cutoff:
+            if overlap >= cutoff:
                 reciprocal_types.append([kind, kinds[idx]])
 
     reciprocal_types = [sorted(t, key=lambda x: len(x)) for t in reciprocal_types]
@@ -328,10 +224,23 @@ def find_reciprocal_relations(pair_list, cutoff=0.5):
 
 
 def remove_reciprocals(edge_df, reciprocal_types):
+    """
+    Removes the reciprocal edges from the edge dataframe.
+
+    :param edge_df: pandas.DataFrame, edge format, with edge types
+    :param reciprocal_types: list of lists, each containing the two edge types reciprocal to each other
+    :return: pandas.DataFrame, with only one of the two reciprocal types remaining
+    """
     edge_copy = edge_df.copy()
 
-
     def swap_reciprocals(types):
+        """
+        Takes two edge types, swaps start and end posistions of 1 type, and renames that type to the other type.
+
+        :param types: list, the two types to be swapped
+        :return: The df slice with the swapped edges.
+        """
+
         # Make a copy of the subsection
         swapped = edge_copy.loc[edge_copy['e_type'] == types[1]].copy()
 
@@ -348,24 +257,36 @@ def remove_reciprocals(edge_df, reciprocal_types):
         return swapped
 
     def remove_duplicates(sub_group):
-        sub_group['tuples'] = list(zip(sub_group['s'], sub_group['o']))
+        """
+        When the same edge goes in both directions e.g. 'Compound <-signficatn-drug-intraction-> Compound'
+        inverted edges must be removed.
 
+        :param sub_group: slice of the DataFrame with only the duplicated edge type.
+        :return: slice of the Dataframe, with duplicate edges removed.
+        """
+        # Bind the start and end ids together
+        sub_group['tuples'] = list(zip(sub_group['s'], sub_group['o']))
         edge_tups = list(sub_group['tuples'])
+
         to_keep = []
         while len(edge_tups) > 0:
+            # Store each edge
             tup = edge_tups.pop()
+            to_keep.append(tup)
+
+            # If the inverse still in the list, remove it
             inverse = (tup[1], tup[0])
             if inverse in edge_tups:
                 edge_tups.remove(inverse)
-            to_keep.append(tup)
 
+        # only keep new unique edges
         idx = sub_group['tuples'].isin(to_keep)
         new_sub = sub_group.loc[idx]
 
         return new_sub.drop('tuples', axis=1)
 
     for types in reciprocal_types:
-        # Relationship is bidirectional
+        # Relationship is bidirectional; can't just query for 1 type or the other
         if types[0] == types[1]:
             sub_group = edge_copy[edge_copy['e_type'] == types[0]].copy()
             new_sub = remove_duplicates(sub_group)
@@ -389,13 +310,16 @@ def prep_for_export(edge_df, overlap_cutoff=0.5, edge_cutoff=0.01):
     # Get node types first
     node_type_dict = get_node_type_dict(edge_df, 'type')
 
-    # Remove some special Characters from edge labels
-    edge_df['pLabel'] = edge_df['pLabel'].apply(lambda s: re.sub('[^a-zA-Z0-9-_*.]', '', s))
+    # Remove edges where objects (o) are not in the set of subjects (s)
+    filt_edges = filter_untyped_nodes(edge_df)
 
-    # Filter the edges
-    filt_edges = filter_untyped_nodes(edge_df).copy()
-    # Get their types
+    # Remove some special characters and extra spaces from edge names
+    func = lambda s: ' '.join(re.sub('[^a-zA-Z0-9-_*.]', ' ', s).split())
+    filt_edges['pLabel'] = filt_edges['pLabel'].apply(func)
+
+    # Get the edge types
     filt_edges['e_type'] = get_edge_types(filt_edges, node_type_dict)
+
     # Remove the edges with low counts
     filt_edges = remove_low_count_edges(filt_edges, node_type_dict, edge_cutoff)
 
@@ -407,12 +331,22 @@ def prep_for_export(edge_df, overlap_cutoff=0.5, edge_cutoff=0.01):
     return filt_edges, node_type_dict, reciprocal_types
 
 
-def get_abbrev_dict(edge_df):
+def get_abbrev_dict(edge_df, node_types):
+    """
+    Gets a dictionary of abbreviations for node and edge types
+
+    :param edge_df: pandas.DataFrame of edges with e_type column included.
+    :param node_types: dictionary, key node URIs, and value types
+    :return: dictionary, with keys node or edge types, and values the respective abbreviation
+    """
+
+    import re
+
     # Create an abbreviation dict for fast mapping of nodes and edges
-    node_types = list(set(edge_df['type']))
+    node_types = list(set(node_types.values()))
     edge_types = list(set(edge_df['pLabel'].str.replace(' ', '-')))
 
-    node_abbrevs = [''.join([w[0].upper() for w in t.split(' ')]) for t in node_types]
+    node_abbrevs = [''.join([w[0].upper() for w in re.split('[ -]', t)]) for t in node_types]
     edge_abbrevs = [''.join([w[0].lower() for w in t.split('-')]) for t in edge_types]
 
     node_abbrev_dict = {t:a for t,a in zip(node_types, node_abbrevs)}
@@ -422,18 +356,37 @@ def get_abbrev_dict(edge_df):
 
 
 def get_metaedge_tuples(edge_df, node_type_dict, reciprocal_relations=None, forward_edges=None):
-    from itertools import chain
-    def get_tuple(row):
+    """
+    Gets the metaedge tuples needed for the a metagraph.
 
+    :param edge_df:
+    :param node_type_dict:
+    :param reciprocal_relations:
+    :param forward_edges:
+    :return:
+    """
+    from itertools import chain
+
+    def get_tuple(row):
         start_kind = node_type_dict[row['s']]
         end_kind = node_type_dict[row['o']]
         edge = row['e_type'].split('_')[0]
 
-        if reciprocal_relations:
+        # If forward edges supplied, use to define directions
+        if forward_edges:
+            if row['e_type'] in forward_edges:
+                direction = 'forward'
+            else:
+                direction = 'both'
+
+        # Use reciprocal relations to define directions
+        elif reciprocal_relations:
             if row['e_type'] in chain(*reciprocal_relations):
                 direction = 'both'
             else:
                 direction = 'forward'
+
+        # if nothing supplied, every edge is bidirectional
         else:
             direction = 'both'
 
@@ -441,44 +394,55 @@ def get_metaedge_tuples(edge_df, node_type_dict, reciprocal_relations=None, forw
 
     return list(edge_df.apply(get_tuple, axis=1).unique())
 
-def prep_hetio(edge_df, node_types, reciprocal_relations, save_dir='data'):
+
+def prep_hetio(edge_df, node_types, reciprocal_relations, save_dir='data', forward_edges=None,
+               neo_nodes=None, neo_edges=None):
     """
     Preps a filtered edge_df unconverted, as well as the reciprocal relations and
     metaedge tuples, then produces all the files needed for hetio import and learn pipeline.
 
     :param edge_df: Pandas.DataFrame, filtered edge dataframedata frame containing edges, output of prep_for_export
     :param node_types: dict, key=uri, value=node_type, output of get_node_types or prep_for_export
-    :param_reciprocal_relations: nested list, output of find_reciprocal_relations, or prep_for_export
+    :param reciprocal_relations: nested list, output of find_reciprocal_relations, or prep_for_export
+    :param save_dir: string, directory to save the output files
+    :param forward_edges: list, the edge types to be forced to forward relationships in graph
+    :param neo_nodes: pandas.DataFrame, nodes formatted for neo4j import if available
+    :param neo_edges: pandas.DataFrame, edges formatted for neo4j import if available
     :return: None
 
     """
-    import os
     from hetio.hetnet import MetaGraph, Graph
     from hetio.readwrite import write_metagraph
     from hetio.stats import degrees_to_excel, get_metaedge_style_df
 
     def add_node_from_row(row):
-        graph.add_node(kind = row[':LABEL'], identifier=row[':ID'], name=row['name:String'])
+        graph.add_node(kind=row[':LABEL'], identifier=row[':ID'], name=row['name:String'])
 
     def add_edge_from_row(row):
         start_id = (node_types_id[row[':START_ID']], row[':START_ID'])
         end_id = (node_types_id[row[':END_ID']], row[':END_ID'])
         kind = row[':TYPE'].split('_')[0]
-        graph.add_edge(start_id, end_id, kind, dir_dict[kind])
+        graph.add_edge(start_id, end_id, kind, dir_dict[row[':TYPE']])
 
     # Get metaedge tuples and abbreviation dicts to build the metagraph
-    metaedge_tuples = get_metaedge_tuples(edge_df, node_types, reciprocal_relations)
-    abbrev_dict = get_abbrev_dict(edge_df)
+    metaedge_tuples = get_metaedge_tuples(edge_df, node_types, reciprocal_relations, forward_edges)
+    abbrev_dict = get_abbrev_dict(edge_df, node_types)
 
     metagraph = MetaGraph.from_edge_tuples(metaedge_tuples, abbrev_dict)
+    filename = os.path.join(save_dir, 'metagraph.json')
+    write_metagraph(metagraph, filename)
 
     # Format new dicts needed for mappings
-    node_types_id = {qt.id_from_uri(k):v for k,v in node_types.items()}
-    dir_dict = {x[2]: x[3] for x in metaedge_tuples}
+    node_types_id = {qt.id_from_uri(k): v for k, v in node_types.items()}
+    # Make a mapper from edge to direction
+    dir_dict = {me[2] + '_' + abbrev_dict[me[0]] + abbrev_dict[me[2]] +
+                abbrev_dict[me[1]]: me[3] for me in metaedge_tuples}
 
     # Get the neo formatted version of nodes and edges (ensure exact match)
-    neo_nodes = format_nodes_neo(edge_df, node_types)
-    neo_edges = format_edges_neo(edge_df)
+    if not neo_nodes:
+        neo_nodes = format_nodes_neo(edge_df, node_types)
+    if not neo_edges:
+        neo_edges = format_edges_neo(edge_df)
 
     # Initialize graph and add nodes and edges
     graph = Graph(metagraph)
@@ -495,3 +459,31 @@ def prep_hetio(edge_df, node_types, reciprocal_relations, save_dir='data'):
     filename = os.path.join(save_dir, 'metaedge-styles.tsv')
     metaedge_style_df = get_metaedge_style_df(metagraph)
     metaedge_style_df.to_csv(filename, sep='\t', index=False)
+
+
+def process_edges(edge_df, save_dir='data', forward_edges=None):
+    """
+
+
+    :param edge_df:
+    :param save_dir:
+    :param forward_edges:
+    :return:
+    """
+
+    # Prep the edges for export
+    prepped, node_types, reciprocal_relations = prep_for_export(edge_df)
+
+    # Format to neo
+    neo_nodes = format_nodes_neo(prepped, node_types)
+    neo_edges = format_edges_neo(prepped)
+
+    # Save to disk
+    nodes_out = os.path.join(save_dir, 'hetnet_nodes.csv')
+    edges_out = os.path.join(save_dir, 'hetnet_edges.csv')
+    neo_nodes.to_csv(nodes_out, index=False)
+    neo_edges.to_csv(edges_out, index=False)
+
+    # Get the files ready for learn, via hetio
+    prep_hetio(edge_df, node_types, reciprocal_relations, save_dir, forward_edges=forward_edges,
+               neo_nodes=neo_nodes, neo_edges=neo_edges)
