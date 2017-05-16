@@ -62,7 +62,7 @@ Make sure the virtual enviornment is activated.  If you have your SSH key linked
 github account use:
 
     git clone git@github.com:filyph/blazegraph-python.git
-    cd pymantic
+    cd blazegraph-python
     python setup.py install
 
 You should now be able to run the notebooks in the `nbs` folder without issue.

@@ -1,20 +1,74 @@
 {
-  "Mature MicroRNA": "data/mirna.txt",
-  "Symptom": "data/symptoms.txt",
-  "Gene": "data/other_genes.txt",
-  "Active Site": "data/active_site.txt",
-  "Binding Site": "data/binding_site.txt",
-  "Protein Domain": "data/p_domain.txt",
-  "Structural Motif": "data/s_motif.txt",
-  "Protein-coding Gene": "data/pc_genes.txt",
-  "Supersecondary Structure": "data/ss_struct.txt",
-  "Compound": "data/compounds.txt",
-  "Post-translational Modification": "data/ptm.txt",
-  "Pseudo Gene": "data/pseu_genes.txt",
-  "Disease": "data/disease.txt",
-  "Non-coding RNA": "data/ncr_genes.txt",
-  "GO Term": "data/go_terms.txt",
-  "Protein Family": "data/p_fams.txt",
-  "Chemical Hazard": "data/chem_hazard.txt",
-  "Protein": "data/proteins.txt"
+  "Compound": {
+    "query_text": "\nSELECT ?s ?sLabel ?p ?o\nWHERE\n{\n  # insance of Chemical Compound\n  ?s wdt:P31 wd:Q11173 .\n}\n",
+    "filename": "data/compounds.txt"
+  },
+  "Protein": {
+    "query_text": "\nSELECT distinct ?s ?sLabel ?p ?o ?oLabel\nWHERE\n{\n    #subclass of protein\n    ?s wdt:P279 wd:Q8054 .\n    #found in taxon homo sapiens\n    ?s wdt:P703 wd:Q15978631 .\n\n}\n",
+    "filename": "data/proteins.txt"
+  },
+  "Binding Site": {
+    "query_text": "\nSELECT DISTINCT ?s ?sLabel\nWHERE\n{\n  # Instance of Binding Stie\n  ?s wdt:P31 wd:Q616005\n}\n",
+    "filename": "data/binding_site.txt"
+  },
+  "Chemical Hazard": {
+    "query_text": "\nSELECT DISTINCT ?s ?sLabel\nWHERE\n{\n  # Subclass of Chemical Hazard\n  ?s wdt:P279 wd:Q21167512\n  }\n",
+    "filename": "data/chem_hazard.txt"
+  },
+  "Gene": {
+    "query_text": "\nSELECT ?s ?sLabel\nWHERE\n{\n  # Subclass of Gene\n  ?s wdt:P279 wd:Q7187 .\n  # Found in Taxon Homo Sapiens\n  ?s wdt:P703 wd:Q15978631 .\n  \n  # Subtract out the other gene types\n  MINUS {?s wdt:P279 wd:Q20747295}\n  MINUS {?s wdt:P279 wd:Q277338}\n  MINUS {?s wdt:P279 wd:Q427087} \n}\n",
+    "filename": "data/other_genes.txt"
+  },
+  "Pseudo Gene": {
+    "query_text": "\nSELECT ?s ?sLabel\nWHERE\n{\n  # Subclass of Pseudogene\n  ?s wdt:P279 wd:Q277338 .\n  # Found in Taxon Homo Sapiens\n  ?s wdt:P703 wd:Q15978631 .\n}\n",
+    "filename": "data/pseu_genes.txt"
+  },
+  "Mature MicroRNA": {
+    "query_text": "\nSELECT DISTINCT ?s ?sLabel\nWHERE\n{\n  # Instance of Mature MicroRNA\n  ?s wdt:P31 wd:Q23838648  \n}\n",
+    "filename": "data/mirna.txt"
+  },
+  "Symptom": {
+    "query_text": "\nSELECT DISTINCT ?s ?sLabel\nWHERE\n{\n  # Subclass of Symptom\n  ?s wdt:P279 wd:Q169872\n  }\n",
+    "filename": "data/symptoms.txt"
+  },
+  "Supersecondary Structure": {
+    "query_text": "\nSELECT DISTINCT ?s ?sLabel\nWHERE\n{\n  # Instance of Supersecondary Structure\n  ?s wdt:P31 wd:Q7644128  \n}\n",
+    "filename": "data/ss_struct.txt"
+  },
+  "Disease": {
+    "query_text": "\nSELECT ?s ?sLabel ?p ?o\nWHERE\n{\n  # Instance of Diseae\n  ?s wdt:P31 wd:Q12136 .\n  \n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\" }\n}\n",
+    "filename": "data/disease.txt"
+  },
+  "Post-translational Modification": {
+    "query_text": "\nSELECT DISTINCT ?s ?sLabel\nWHERE\n{\n  # Instance of Postranslational Modification\n  ?s wdt:P31 wd:Q898362\n  }\n",
+    "filename": "data/ptm.txt"
+  },
+  "Active Site": {
+    "query_text": "\nSELECT DISTINCT ?s ?sLabel\nWHERE\n{\n  # Instance of Active Stie\n  ?s wdt:P31 wd:Q423026  \n}\n",
+    "filename": "data/active_site.txt"
+  },
+  "GO Term": {
+    "query_text": "\nSELECT DISTINCT ?s ?sLabel\nWHERE\n{\n  # Molecular Function Terms\n  {?a wdt:P680 ?s}\n  # Biolocial Process Terms\n  UNION {?a wdt:P682 ?s}\n  # Cell Component Terms\n  UNION {?a wdt:P681 ?s}\n}\n",
+    "filename": "data/go_terms.txt"
+  },
+  "Protein Domain": {
+    "query_text": "\nSELECT DISTINCT ?s ?sLabel\nWHERE\n{\n  # Instance of Protein Domain\n  ?s wdt:P31 wd:Q898273\n  }\n",
+    "filename": "data/p_domain.txt"
+  },
+  "Protein Family": {
+    "query_text": "\nSELECT DISTINCT ?s ?sLabel\nWHERE\n{\n  # Instance of Protein Family\n  ?s wdt:P31 wd:Q417841\n  }\n",
+    "filename": "data/p_fams.txt"
+  },
+  "Non-coding RNA": {
+    "query_text": "\nSELECT ?s ?sLabel\nWHERE\n{\n  # Subclass of non-coding RNA\n  ?s wdt:P279 wd:Q427087 .\n  # Found in Taxon Homo Sapiens\n  ?s wdt:P703 wd:Q15978631 .\n \n}\n",
+    "filename": "data/ncr_genes.txt"
+  },
+  "Structural Motif": {
+    "query_text": "\nSELECT DISTINCT ?s ?sLabel\nWHERE\n{\n  # Instance of Structural Motif\n  ?s wdt:P31 wd:Q3273544  \n}\n",
+    "filename": "data/s_motif.txt"
+  },
+  "Protein-coding Gene": {
+    "query_text": "\nSELECT ?s ?sLabel\nWHERE\n{\n  # Subclass of Protein-Coding Gene\n  ?s wdt:P279 wd:Q20747295 .\n  # Found in Taxon Homo Sapiens\n  ?s wdt:P703 wd:Q15978631 .\n  \n}\n",
+    "filename": "data/pc_genes.txt"
+  }
 }
