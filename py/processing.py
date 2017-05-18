@@ -1,9 +1,9 @@
-import sparql_tools as qt
+from . import sparql_tools as qt
 import pandas as pd
 import os
 
 
-def get_node_type_dict(df, label = 'label'):
+def get_node_type_dict(df, label='label'):
     """
     Returns a mapping dictionary from node URI to the node's type
 
@@ -19,7 +19,7 @@ def format_nodes_neo(edge_df, type_dict):
     Takes a list of edges, and returns a csv of just the nodes, formatted for Neo4j import.
 
     :param edge_df: Pandas.DataFrame with of the edges to be added to the graph
-    :param col: String, the column uri and label to produce the nodes from
+    :param type_dict: Dict, keys uri, values the type of node
     :return: Pandas.DataFrame, formatted for neo4j import, ready to be exported to CSV
     """
 
@@ -103,9 +103,9 @@ def remove_low_count_edges(edge_df, node_types, cutoff=.01):
     :return: pandas.DataFrame, with all edges that do not meet the cutoff removed.
     """
     from collections import Counter
-    # Copy dataframe to avoid mutation
+    # Copy DataFrame to avoid mutation
     edge_df_c = edge_df.copy()
-    
+
     # Make sure edges have been typed, if not, type them
     if 'e_type' not in edge_df_c:
         edge_df_c['e_type'] = get_edge_types(edge_df_c)
@@ -295,7 +295,7 @@ def remove_reciprocals(edge_df, reciprocal_types):
         else:
             edge_copy.loc[edge_copy['e_type'] == types[1]] = swap_reciprocals(types)
 
-    return edge_copy.drop_duplicates(subset=['s','o', 'e_type'])
+    return edge_copy.drop_duplicates(subset=['s', 'o', 'e_type'])
 
 
 def prep_for_export(edge_df, overlap_cutoff=0.5, edge_cutoff=0.01):
@@ -303,6 +303,8 @@ def prep_for_export(edge_df, overlap_cutoff=0.5, edge_cutoff=0.01):
     Takes a list of edges, and returns a csv of the edges, formatted for Neo4j import.
 
     :param edge_df: Pandas.DataFrame, with the edges to be added to the graph
+    :param overlap_cutoff:, float, percentage of nodes that must have reverse edge for types to be considered reciprocal
+    :param edge_cutoff: float, percentage of nodes of a type, with edges of a type, below which the edge type is dropped
     :return: Pandas.DataFrame, formatted for neo4j, import ready to be exported to csv
     """
     import re
@@ -349,8 +351,8 @@ def get_abbrev_dict(edge_df, node_types):
     node_abbrevs = [''.join([w[0].upper() for w in re.split('[ -]', t)]) for t in node_types]
     edge_abbrevs = [''.join([w[0].lower() for w in t.split('-')]) for t in edge_types]
 
-    node_abbrev_dict = {t:a for t,a in zip(node_types, node_abbrevs)}
-    edge_abbrev_dict = {t:a for t,a in zip(edge_types, edge_abbrevs)}
+    node_abbrev_dict = {t: a for t, a in zip(node_types, node_abbrevs)}
+    edge_abbrev_dict = {t: a for t, a in zip(edge_types, edge_abbrevs)}
 
     return {**node_abbrev_dict, **edge_abbrev_dict}
 
@@ -461,18 +463,24 @@ def prep_hetio(edge_df, node_types, reciprocal_relations, save_dir='data', forwa
     metaedge_style_df.to_csv(filename, sep='\t', index=False)
 
 
-def process_edges(edge_df, save_dir='data', forward_edges=None):
+def process_edges(edge_file='edges.h5', overlap_cutoff=0.5, edge_cutoff=0.1, save_dir='data', forward_edges=None):
     """
+    Runs the entire edge processing pipeline. Produces neo4j node and edge input files, as well as files needed for
+    the learn pipeline.
 
-
-    :param edge_df:
-    :param save_dir:
-    :param forward_edges:
+    :param edge_file: String, the location of the edge file, output from sparql_tools pipeline's get_all_edges() function.
+    :param overlap_cutoff:, float, percentage of nodes that must have reverse edge for types to be considered reciprocal
+    :param edge_cutoff: float, percentage of nodes of a type, with edges of a type, below which the edge type is dropped
+    :param save_dir: String, the directory where datafiles are to be saved
+    :param forward_edges: List, edge types to be forced to forward relationships in the graph
     :return:
     """
 
+    # Read the edge file
+    edge_df = pd.read_hdf(edge_file)
+
     # Prep the edges for export
-    prepped, node_types, reciprocal_relations = prep_for_export(edge_df)
+    prepped, node_types, reciprocal_relations = prep_for_export(edge_df, overlap_cutoff, edge_cutoff)
 
     # Format to neo
     neo_nodes = format_nodes_neo(prepped, node_types)

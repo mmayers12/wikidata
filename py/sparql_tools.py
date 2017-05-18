@@ -128,17 +128,16 @@ class Entities(Mapping):
         :return: String, the label for the given property (e.g. P 'instance of')
         """
 
-        # Initialzie needed values
+        # Initialize needed values
         eid = id_from_uri(uri)
         new_eid = None
 
-        # Check to see if the entity is alreay in the file
+        # Check to see if the entity is already in the file
         if eid in self.mapp:
             return self.mapp[eid]
-
         else:
             # Unlike properties, entities get changed a lot more readily
-            # and funny things can happen like merging and duplicaiton
+            # and funny things can happen like merging and duplication
             try:
                 res = requests.get(uri)
                 r_dict = json.loads(res.text)
@@ -160,7 +159,7 @@ class Entities(Mapping):
                 # Add new mapping to the map dictionary
                 self.mapp[eid] = label
                 if new_eid:
-                    self.mapp[new_id] = label
+                    self.mapp[new_eid] = label
             # If there's an error in this at all, just give back the ID
             except:
                 label = eid
@@ -199,7 +198,7 @@ class ExternalIDMap(Mapping):
 
 
 class DOIDs(ExternalIDMap):
-    def __init__(self,map_file='doid.json'):
+    def __init__(self, map_file='doid.json'):
         """
         Class to hold mappings from Disease Ontology ids (DOID) to wikidata item ids
         e.g. DOID:01521 -> Q105120202
@@ -256,7 +255,7 @@ def query_to_df(result):
     dat = result['results']['bindings']
     dat1 = []
     for d in dat:
-        d = {k:v['value'] for k, v in d.items()}
+        d = {k: v['value'] for k, v in d.items()}
         dat1.append(d)
     return pd.DataFrame(dat1)
 

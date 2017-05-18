@@ -2,6 +2,8 @@ import pandas as pd
 import collections
 import random
 import logging
+import os
+
 
 def get_pair_lists(edges):
     """
@@ -22,11 +24,9 @@ def get_pair_lists(edges):
         end = list(edges_of_type[':END_ID'])
         pair_list = [(s, e) for s, e in zip(start, end)]
 
-
         pair_list_dict[kind] = pair_list
 
     return pair_list_dict
-
 
 
 def permute_pair_list(pair_list, directed=False, multiplier=10, excluded_pair_set=set(), seed=0, log=False):
@@ -156,9 +156,9 @@ def permute_edges(edges, multiplier=10, seed=0):
 
     :param edges: pandas.DataFrame, edge list formatted for neo4j import
     :param multiplier: int, multiplier for number of permutations that should be done on edges
-    :param seed: int, the seed for random numbers used in edge permuataion
-    :return: pandas.Dataframe, edge list formatted for neo4j import with edges permuted
-    :return: pandas.Dataframe, statistics on the permutations
+    :param seed: int, the seed for random numbers used in edge permutation
+    :return: pandas.DataFrame, edge list formatted for neo4j import with edges permuted
+    :return: pandas.DataFrame, statistics on the permutations
     """
 
     pair_list_dict = get_pair_lists(edges)
@@ -169,7 +169,7 @@ def permute_edges(edges, multiplier=10, seed=0):
     # Permute from the pair list
     permuted_pair_lists = dict()
     for kind, pair_list in pair_list_dict.items():
-        permuted_pair_list, stats = permute_pair_list(pair_list, directed = True, multiplier = multiplier, seed = seed)
+        permuted_pair_list, stats = permute_pair_list(pair_list, directed=True, multiplier=multiplier, seed=seed)
         permuted_pair_lists[kind] = permuted_pair_list
         for stat in stats:
             stat['metaedge'] = kind
@@ -178,3 +178,55 @@ def permute_edges(edges, multiplier=10, seed=0):
 
     # Return to a dataFrame
     return pair_list_to_df(permuted_pair_lists), all_stats
+
+
+def run_permute_pipeline(edge_file, n_perms=5, multiplier=5, save_dir='neo/import'):
+    """
+    Runs the entire permute pipeline and saves the permuted egde files and statistics to disk
+
+    :param edge_file: String, the location of the neo4j import formatted edge file to be permuted
+    :param n_perms: int, number of permutations to produce
+    :param multiplier: int, multiplier for the permutations
+    :param save_dir: String, location of the save folder
+    :return: None
+    """
+    import time
+
+    # Get start time
+    start = time.time()
+
+    # Read in edge file
+    print('Reading Edges...')
+    edges = pd.read_csv(edge_file)
+
+    # Initialize other variables
+    path = os.path.abspath(save_dir)
+    permuted_edges = edges
+    stat_dfs = []
+
+    for i in range(1, n_perms+1):
+        # Permute edges
+        print('Starting permutation', i)
+        permuted_edges, stats = permute_edges(permuted_edges, multiplier=multiplier, seed=i)
+
+        # Add permutation statistics
+        stat_df = pd.DataFrame(stats)
+        stat_df['permutation'] = i
+        stat_dfs.append(stat_df)
+
+        # Save permuted edges
+        filename = os.path.join(path, 'hetnet_edges_perm-{}.csv'.format(i))
+        permuted_edges.to_csv(filename, index=False)
+        print('Saved file:\n{}'.format(filename))
+        print('')
+
+    # Save statistics
+    stat_df = pd.concat(stat_dfs)
+    filename = os.path.join(path, 'stats.tsv')
+    stat_df.to_csv(filename, sep='\t', index=False, float_format='%.5g')
+    print('Saved statistics on permutations to:\n{}'.format(filename))
+
+    # Get and print timing info
+    m, s = divmod(time.time() - start, 60)
+    h, m = divmod(m, 60)
+    print('Took {} hours, {} minutes, {} seconds'.format(int(h), int(m), int(s)))
