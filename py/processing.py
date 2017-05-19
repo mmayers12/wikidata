@@ -1,4 +1,4 @@
-from . import sparql_tools as qt
+import sparql_tools as qt
 import pandas as pd
 import os
 
