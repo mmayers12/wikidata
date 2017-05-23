@@ -219,7 +219,7 @@ def find_reciprocal_relations(pair_list, cutoff=0.5):
             if overlap >= cutoff:
                 reciprocal_types.append([kind, kinds[idx]])
 
-    reciprocal_types = [sorted(t, key=lambda x: len(x)) for t in reciprocal_types]
+    reciprocal_types = [sorted(t, key=lambda x: (len(x), x)) for t in reciprocal_types]
     return reciprocal_types
 
 
@@ -441,9 +441,9 @@ def prep_hetio(edge_df, node_types, reciprocal_relations, save_dir='data', forwa
                 abbrev_dict[me[1]]: me[3] for me in metaedge_tuples}
 
     # Get the neo formatted version of nodes and edges (ensure exact match)
-    if not neo_nodes:
+    if neo_nodes is None:
         neo_nodes = format_nodes_neo(edge_df, node_types)
-    if not neo_edges:
+    if neo_edges is None:
         neo_edges = format_edges_neo(edge_df)
 
     # Initialize graph and add nodes and edges
