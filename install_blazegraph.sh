@@ -6,7 +6,7 @@ mv service-0.2.4-SNAPSHOT db
 
 # Run Blazegraph for the first time to generate config files
 cd db
-./runBlazegraph.sh &> ../firstrun.log &
+./runBlazegraph.sh &> ../firstrun.log & export PID=$!
 
 # Number of seconds to wait
 WAIT_SECONDS=25
@@ -19,7 +19,5 @@ while [ $count -lt $WAIT_SECONDS ]; do
     ((count++))
 done
 
-USER=`whoami`
-PID=`pgrep java -u $USER`
 kill $PID
 echo done
