@@ -1,8 +1,30 @@
 #!/bin/bash
 
+if [ $1 ]; then
+    TARGET_DIR=$1
+else
+    TARGET_DIR='../'
+fi
+
+# Get the latest version of wikidata-query-rdf
+pushd $TARGET_DIR
+git clone  --recurse-submodules https://gerrit.wikimedia.org/r/wikidata/query/rdf wikidata-query-rdf
+cd wikidata-query-rdf
+mvn package
+
+# Get the filename
+FILE_NAME=$(ls dist/target/ | grep SNAPSHOT-dist.zip)
+
+# Move into this directory
+popd
+cp $(TARGET_DIR)wikidata-query-rdf/dist/target/$(FILE_NAME) .
+
+
 # Unzip the archive containing databse and helper scripts
-unzip service-0.2.4-SNAPSHOT-dist.zip
-mv service-0.2.4-SNAPSHOT db
+unzip $FILE_NAME
+
+DIR_NAME=$(echo $FILE_NAME | rev | cut -c 5- | rev)
+mv DIR_NAME db
 
 # Run Blazegraph for the first time to generate config files
 cd db
