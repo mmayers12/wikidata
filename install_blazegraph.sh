@@ -7,7 +7,7 @@ else
 fi
 
 # Get the latest version of wikidata-query-rdf
-pushd $TARGET_DIR
+pushd $TARGET_DIR > /dev/null
 git clone  --recurse-submodules https://gerrit.wikimedia.org/r/wikidata/query/rdf wikidata-query-rdf
 cd wikidata-query-rdf
 mvn package
@@ -16,7 +16,7 @@ mvn package
 FILE_NAME=$(ls dist/target/ | grep SNAPSHOT-dist.zip)
 
 # Move into this directory
-popd
+popd > /dev/null
 cp $(TARGET_DIR)wikidata-query-rdf/dist/target/$(FILE_NAME) .
 
 
