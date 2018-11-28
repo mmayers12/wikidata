@@ -15,55 +15,45 @@ repositioning candidataes.
 
 - Java 7 or greater
 
-### To run Python scripts
+### To run the pipline
 
-- [pymantic](https://github.com/filyph/blazegraph-python)
+- Anaconda with python version 3.7
 
 ## Database Installation Instructions
 
 ### Data Download
 
-WikiData dump file was downloaded using `download_data.sh` to the directory `data/`
-The data file was approx 11 GB and took around 90 min to download.
+WikiData dump file was downloaded using `download_data.sh` to the directory `0_data/`
+The 20181112 data file was approx 46.13G and finshed in 8h 59m.
 
 ### Database Installation
 
 Blazegraph can be installed using the `install_blazegraph.sh` script. This will
-unzip the zipped archive. This archive was compiled from the [widkidata-qurey-rdf
-repository](https://github.com/wikimedia/wikidata-query-rdf), liscenced under the
-apache 2.0 liscence. This archive also contains many useful scripts for reducing
-the size of the data in the dump and loading into blazegraph.
+use git to clone the [widkidata-qurey-rdf
+repository](https://github.com/wikimedia/wikidata-query-rdf), to the parent directory, 
+build using maven and then copy the resulting scripts to a folder titled `db`.
+wikidata-query-rdf is liscenced under the apache 2.0 liscence. This archive also
+contains many useful scripts for reducing the size of the data in the dump and
+loading into blazegraph.
 
 ### Clean Data
 
 The `clean_data.sh` script will split the data into smaller pieces for better
 data loading. In the process of splitting, it will remove all non-english
-language data and all sitelinks, to reduce data size. (approx 3 hr)
+language data and all sitelinks, to reduce data size. (approx 18 hr)
 
 ### Data Load
 
 The `load_data.sh` script will load the split wikidata dump file into blazegraph.
-The data is stored in wikidata.jnl, which comes to about 90 GB in the current
-(20170130) dump of wikidata. (approx 17 hr)
+The data is stored in wikidata.jnl, which comes to about 413 GB in the current
+(20181112) dump of wikidata. (approx 51h 33m 42s)
 
 ## Python installation instrucitons
 
-This repo is designed to run with python3.
+This repo is designed to run with a python3.7 based anaconda enviornment
 
-### Create and update virtual enviornment
+### Install and activate the anaconda enviornment
 
-    pyvenv venv
-    source venv/bin/activate
-    pip install -r requirements.txt
-
-### Install pymantic
-
-Make sure the virtual enviornment is activated.  If you have your SSH key linked to your
-github account use:
-
-    git clone git@github.com:filyph/blazegraph-python.git
-    cd blazegraph-python
-    python setup.py install
-
-You should now be able to run the notebooks in the `nbs` folder without issue.
+    $ conda env create envionment.yml
+    $ source activate ml
 

@@ -3,7 +3,7 @@
 if [ $1 ]; then
     DATE=$1
 else
-    DATE='20170130'
+    DATE='20181112'
 fi
 
 mkdir -p 0_data/external
