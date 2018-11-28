@@ -5,7 +5,7 @@ cd db
 nohup ./runBlazegraph.sh > ../db.log &
 
 # Get the data directory
-pushd ../data/split > /dev/null
+pushd ../0_data/manual > /dev/null
 DATA_DIR=`pwd`
 popd > /dev/null
 

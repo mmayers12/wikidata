@@ -1,12 +1,12 @@
 #!/bin/bash
 
-DATAFILE=`ls data/*.ttl.gz`
+DATAFILE=`ls 0_data/external/*.ttl.gz`
 
-mkdir data/split
+mkdir 0_data/manual
 cd db
 
 # Begin Process of cleaning the data
 # Script will remvoe non-english entries, split into managable sized files
 # And remove sitelinks
-nohup ./munge.sh -f ../$DATAFILE -d ../data/split -l en -s &> ../dataclean.log &
+nohup ./munge.sh -f ../$DATAFILE -d ../0_data/manual -l en -s &> ../dataclean.log &
 

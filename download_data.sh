@@ -6,6 +6,6 @@ else
     DATE='20170130'
 fi
 
-mkdir data
-cd data
-nohup wget 'https://dumps.wikimedia.org/wikidatawiki/entities/'$DATE'/wikidata-'$DATE'-all-BETA.ttl.gz' --progress=bar:force:noscroll &> ../download.log &
+mkdir -p 0_data/external
+cd 0_data/external
+nohup wget 'https://dumps.wikimedia.org/wikidatawiki/entities/'$DATE'/wikidata-'$DATE'-all-BETA.ttl.gz' --progress=bar:force:noscroll &> ../../download.log &
