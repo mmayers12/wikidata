@@ -1,5 +1,7 @@
 # Project specific Ignores
-data
+0_data
+2_pipeline
+3_output
 BLAZEGRAPH*
 db
 *.log
