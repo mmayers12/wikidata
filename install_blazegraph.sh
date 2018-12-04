@@ -25,9 +25,15 @@ unzip $FILE_NAME
 
 DIR_NAME=$(echo $FILE_NAME | rev | cut -c 5- | rev)
 mv DIR_NAME db
+cd db
+
+# Update the web.xml file so that there are not query timeouts
+# TODO Update this so that it grabs same FILENAME from above
+jar xvf blazegraph-service-0.3.1-SNAPSHOT.war WEB-INF/web.xml
+sed -i -e 's/600000/0/g' WEB-INF/web.xml
+jar uvf blazegraph-service-0.3.1-SNAPSHOT.war WEB-INF
 
 # Run Blazegraph for the first time to generate config files
-cd db
 ./runBlazegraph.sh &> ../firstrun.log & export PID=$!
 
 # Number of seconds to wait
