@@ -5,12 +5,18 @@
 BLAZEGRAPH*
 db
 *.log
+*.log.*
 venv
 .ipynb_checkpoints
 nohup.out
 qc
 neo4j-community-*
 *.report
+service-*-SNAPSHOT-dist.zip
+nbs
+py
+neo
+*test*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
